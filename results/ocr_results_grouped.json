@@ -1,0 +1,472 @@
+[
+  {
+    "text": "09:00-09:30\n02교시",
+    "confidence": 0.9813758134841919,
+    "coordinates": {
+      "x_min": 38.0,
+      "x_max": 105.0,
+      "y_min": 70.0,
+      "y_max": 129.0
+    }
+  },
+  {
+    "text": "09:30-10:00\n03교시",
+    "confidence": 0.9804624617099762,
+    "coordinates": {
+      "x_min": 39.0,
+      "x_max": 105.0,
+      "y_min": 130.0,
+      "y_max": 191.0
+    }
+  },
+  {
+    "text": "10:00-10:30\n04교시",
+    "confidence": 0.9976263642311096,
+    "coordinates": {
+      "x_min": 39.0,
+      "x_max": 105.0,
+      "y_min": 188.0,
+      "y_max": 252.0
+    }
+  },
+  {
+    "text": "1200-12:30\n08교시",
+    "confidence": 0.9925512075424194,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 102.0,
+      "y_min": 435.0,
+      "y_max": 496.0
+    }
+  },
+  {
+    "text": "12:30-13:00\n09교시",
+    "confidence": 0.9799709916114807,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 102.0,
+      "y_min": 497.0,
+      "y_max": 555.0
+    }
+  },
+  {
+    "text": "13:00-13:30\n10교시",
+    "confidence": 0.9811782836914062,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 102.0,
+      "y_min": 558.0,
+      "y_max": 619.0
+    }
+  },
+  {
+    "text": "1:30~-14:00\n11교시",
+    "confidence": 0.8885580897331238,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 102.0,
+      "y_min": 619.0,
+      "y_max": 678.0
+    }
+  },
+  {
+    "text": "14:00-14:20\n12교시",
+    "confidence": 0.9673106670379639,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 102.0,
+      "y_min": 679.0,
+      "y_max": 739.0
+    }
+  },
+  {
+    "text": "1500-15:30\n4교시",
+    "confidence": 0.9784755110740662,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 104.0,
+      "y_min": 801.0,
+      "y_max": 860.0
+    }
+  },
+  {
+    "text": "15:30-16:00",
+    "confidence": 0.9636879563331604,
+    "coordinates": {
+      "x_min": 42.0,
+      "x_max": 102.0,
+      "y_min": 863.0,
+      "y_max": 878.0
+    }
+  },
+  {
+    "text": "10:30--1:00\n05교시",
+    "confidence": 0.9627884328365326,
+    "coordinates": {
+      "x_min": 44.0,
+      "x_max": 104.0,
+      "y_min": 253.0,
+      "y_max": 312.0
+    }
+  },
+  {
+    "text": "1:00-11:30\n06교시",
+    "confidence": 0.9605063199996948,
+    "coordinates": {
+      "x_min": 44.0,
+      "x_max": 100.0,
+      "y_min": 314.0,
+      "y_max": 372.0
+    }
+  },
+  {
+    "text": "1:30-12:00\n07교시",
+    "confidence": 0.9712340831756592,
+    "coordinates": {
+      "x_min": 44.0,
+      "x_max": 102.0,
+      "y_min": 375.0,
+      "y_max": 435.0
+    }
+  },
+  {
+    "text": "14:30~15:0[\n13교시",
+    "confidence": 0.9427483379840851,
+    "coordinates": {
+      "x_min": 44.0,
+      "x_max": 100.0,
+      "y_min": 743.0,
+      "y_max": 801.0
+    }
+  },
+  {
+    "text": "이교시",
+    "confidence": 0.9722163081169128,
+    "coordinates": {
+      "x_min": 57.0,
+      "x_max": 88.0,
+      "y_min": 56.0,
+      "y_max": 68.0
+    }
+  },
+  {
+    "text": "교시",
+    "confidence": 0.999167799949646,
+    "coordinates": {
+      "x_min": 58.0,
+      "x_max": 87.0,
+      "y_min": 10.0,
+      "y_max": 27.0
+    }
+  },
+  {
+    "text": "5w융합코딩1\n백수진소프트301",
+    "confidence": 0.9417981207370758,
+    "coordinates": {
+      "x_min": 154.0,
+      "x_max": 246.0,
+      "y_min": 50.0,
+      "y_max": 81.0
+    }
+  },
+  {
+    "text": "윤승철상경506",
+    "confidence": 0.9976668357849121,
+    "coordinates": {
+      "x_min": 154.0,
+      "x_max": 237.0,
+      "y_min": 434.0,
+      "y_max": 449.0
+    }
+  },
+  {
+    "text": "경영과학1원어",
+    "confidence": 0.9743120074272156,
+    "coordinates": {
+      "x_min": 156.0,
+      "x_max": 237.0,
+      "y_min": 416.0,
+      "y_max": 432.0
+    }
+  },
+  {
+    "text": "금융공학원어\n황창하미디어403",
+    "confidence": 0.9807922840118408,
+    "coordinates": {
+      "x_min": 370.0,
+      "x_max": 465.0,
+      "y_min": 50.0,
+      "y_max": 81.0
+    }
+  },
+  {
+    "text": "생산운영관리\n임현정",
+    "confidence": 0.9988695383071899,
+    "coordinates": {
+      "x_min": 370.0,
+      "x_max": 440.0,
+      "y_min": 232.0,
+      "y_max": 266.0
+    }
+  },
+  {
+    "text": "경영과학1원어\n분승철",
+    "confidence": 0.983567088842392,
+    "coordinates": {
+      "x_min": 372.0,
+      "x_max": 453.0,
+      "y_min": 782.0,
+      "y_max": 814.0
+    }
+  },
+  {
+    "text": "상경506",
+    "confidence": 0.9996696710586548,
+    "coordinates": {
+      "x_min": 403.0,
+      "x_max": 453.0,
+      "y_min": 799.0,
+      "y_max": 814.0
+    }
+  },
+  {
+    "text": "상경209",
+    "confidence": 0.9995128512382507,
+    "coordinates": {
+      "x_min": 407.0,
+      "x_max": 453.0,
+      "y_min": 250.0,
+      "y_max": 265.0
+    }
+  },
+  {
+    "text": "으검색",
+    "confidence": 0.8389245867729187,
+    "coordinates": {
+      "x_min": 470.0,
+      "x_max": 520.0,
+      "y_min": 845.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "2022년",
+    "confidence": 0.983249306678772,
+    "coordinates": {
+      "x_min": 548.0,
+      "x_max": 597.0,
+      "y_min": 845.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "파이뻔프로그래망Sw융합",
+    "confidence": 0.8407766222953796,
+    "coordinates": {
+      "x_min": 583.0,
+      "x_max": 728.0,
+      "y_min": 778.0,
+      "y_max": 801.0
+    }
+  },
+  {
+    "text": "노동법1\n신동윤대학원동216",
+    "confidence": 0.9684694409370422,
+    "coordinates": {
+      "x_min": 586.0,
+      "x_max": 687.0,
+      "y_min": 50.0,
+      "y_max": 81.0
+    }
+  },
+  {
+    "text": "수리경제학\n선주연상경415",
+    "confidence": 0.998991996049881,
+    "coordinates": {
+      "x_min": 586.0,
+      "x_max": 666.0,
+      "y_min": 416.0,
+      "y_max": 449.0
+    }
+  },
+  {
+    "text": "윤석현\n1학기",
+    "confidence": 0.9912185370922089,
+    "coordinates": {
+      "x_min": 586.0,
+      "x_max": 630.0,
+      "y_min": 798.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "소프트303\n2021년",
+    "confidence": 0.9966796934604645,
+    "coordinates": {
+      "x_min": 624.0,
+      "x_max": 705.0,
+      "y_min": 795.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "2학기",
+    "confidence": 0.9997904896736145,
+    "coordinates": {
+      "x_min": 700.0,
+      "x_max": 741.0,
+      "y_min": 845.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "데이터마이닝CE\n2공521",
+    "confidence": 0.978254109621048,
+    "coordinates": {
+      "x_min": 802.0,
+      "x_max": 894.0,
+      "y_min": 50.0,
+      "y_max": 80.0
+    }
+  },
+  {
+    "text": "수리경제학\n선주연상경415",
+    "confidence": 0.9989383816719055,
+    "coordinates": {
+      "x_min": 802.0,
+      "x_max": 882.0,
+      "y_min": 416.0,
+      "y_max": 449.0
+    }
+  },
+  {
+    "text": "금융공학원애",
+    "confidence": 0.9383606910705566,
+    "coordinates": {
+      "x_min": 802.0,
+      "x_max": 881.0,
+      "y_min": 600.0,
+      "y_max": 616.0
+    }
+  },
+  {
+    "text": "황창하미디어403",
+    "confidence": 0.9853627681732178,
+    "coordinates": {
+      "x_min": 802.0,
+      "x_max": 897.0,
+      "y_min": 616.0,
+      "y_max": 631.0
+    }
+  },
+  {
+    "text": "시간표",
+    "confidence": 0.9999402165412903,
+    "coordinates": {
+      "x_min": 802.0,
+      "x_max": 840.0,
+      "y_min": 845.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "공유",
+    "confidence": 0.9916362762451172,
+    "coordinates": {
+      "x_min": 838.0,
+      "x_max": 867.0,
+      "y_min": 847.0,
+      "y_max": 863.0
+    }
+  },
+  {
+    "text": "다운로드",
+    "confidence": 0.9967332482337952,
+    "coordinates": {
+      "x_min": 915.0,
+      "x_max": 966.0,
+      "y_min": 845.0,
+      "y_max": 862.0
+    }
+  },
+  {
+    "text": "게임프로그래밍Sw융합",
+    "confidence": 0.9064721465110779,
+    "coordinates": {
+      "x_min": 1017.0,
+      "x_max": 1150.0,
+      "y_min": 536.0,
+      "y_max": 555.0
+    }
+  },
+  {
+    "text": "기계학습과인공신경망5W융합\n윤석현소프트416",
+    "confidence": 0.9841549098491669,
+    "coordinates": {
+      "x_min": 1018.0,
+      "x_max": 1180.0,
+      "y_min": 50.0,
+      "y_max": 81.0
+    }
+  },
+  {
+    "text": "정범연",
+    "confidence": 0.9880809187889099,
+    "coordinates": {
+      "x_min": 1018.0,
+      "x_max": 1058.0,
+      "y_min": 554.0,
+      "y_max": 570.0
+    }
+  },
+  {
+    "text": "소프트310",
+    "confidence": 0.9987545013427734,
+    "coordinates": {
+      "x_min": 1052.0,
+      "x_max": 1110.0,
+      "y_min": 555.0,
+      "y_max": 570.0
+    }
+  },
+  {
+    "text": "작곡실기A",
+    "confidence": 0.9989662170410156,
+    "coordinates": {
+      "x_min": 1233.0,
+      "x_max": 1288.0,
+      "y_min": 293.0,
+      "y_max": 309.0
+    }
+  },
+  {
+    "text": "관현악실기A\n미재준",
+    "confidence": 0.9344613254070282,
+    "coordinates": {
+      "x_min": 1234.0,
+      "x_max": 1300.0,
+      "y_min": 49.0,
+      "y_max": 80.0
+    }
+  },
+  {
+    "text": "관현악실기A\n미재준",
+    "confidence": 0.9522402882575989,
+    "coordinates": {
+      "x_min": 1234.0,
+      "x_max": 1299.0,
+      "y_min": 172.0,
+      "y_max": 203.0
+    }
+  },
+  {
+    "text": "백영은",
+    "confidence": 0.9951664805412292,
+    "coordinates": {
+      "x_min": 1234.0,
+      "x_max": 1269.0,
+      "y_min": 309.0,
+      "y_max": 326.0
+    }
+  }
+]

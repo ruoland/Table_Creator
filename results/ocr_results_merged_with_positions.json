@@ -1,638 +1,750 @@
 [
-  {
-    "text": "미리초 |학기 U",
-    "confidence": 0.5723560452461243,
-    "coordinates": {
-      "x_min": 41.0,
-      "x_max": 202.0,
-      "y_min": 42.0,
-      "y_max": 151.0
+  [
+    {
+      "text": "2020학년도",
+      "confidence": 0.9954577684402466,
+      "coordinates": {
+        "x_min": 245.0,
+        "x_max": 356.0,
+        "y_min": 54.0,
+        "y_max": 73.0
+      },
+      "row": 1,
+      "column": 1
     },
-    "row": 1,
-    "column": 1
-  },
-  {
-    "text": "1학년",
-    "confidence": 0.9996489882469177,
-    "coordinates": {
-      "x_min": 212.0,
-      "x_max": 268.0,
-      "y_min": 42.0,
-      "y_max": 68.0
+    {
+      "text": "1학기",
+      "confidence": 0.9995457530021667,
+      "coordinates": {
+        "x_min": 367.0,
+        "x_max": 420.0,
+        "y_min": 52.0,
+        "y_max": 73.0
+      },
+      "row": 1,
+      "column": 2
     },
-    "row": 1,
-    "column": 2
-  },
-  {
-    "text": "3반 시간표",
-    "confidence": 0.9997355937957764,
-    "coordinates": {
-      "x_min": 218.0,
-      "x_max": 386.0,
-      "y_min": 41.0,
-      "y_max": 148.0
+    {
+      "text": "강의시간표",
+      "confidence": 0.9999276995658875,
+      "coordinates": {
+        "x_min": 430.0,
+        "x_max": 536.0,
+        "y_min": 52.0,
+        "y_max": 73.0
+      },
+      "row": 1,
+      "column": 3
     },
-    "row": 1,
-    "column": 3
-  },
-  {
-    "text": "-",
-    "confidence": 0.7565006613731384,
-    "coordinates": {
-      "x_min": 345.0,
-      "x_max": 351.0,
-      "y_min": 53.0,
-      "y_max": 58.0
+    {
+      "text": "학과:",
+      "confidence": 0.9993858933448792,
+      "coordinates": {
+        "x_min": 26.0,
+        "x_max": 59.0,
+        "y_min": 86.0,
+        "y_max": 101.0
+      },
+      "row": 2,
+      "column": 1
     },
-    "row": 2,
-    "column": 1
-  },
-  {
-    "text": "월",
-    "confidence": 0.9997079968452454,
-    "coordinates": {
-      "x_min": 117.0,
-      "x_max": 134.0,
-      "y_min": 178.0,
-      "y_max": 197.0
+    {
+      "text": "토목공학과",
+      "confidence": 0.9998992681503296,
+      "coordinates": {
+        "x_min": 75.0,
+        "x_max": 137.0,
+        "y_min": 86.0,
+        "y_max": 100.0
+      },
+      "row": 2,
+      "column": 2
     },
-    "row": 3,
-    "column": 1
-  },
-  {
-    "text": "화",
-    "confidence": 0.9995649456977844,
-    "coordinates": {
-      "x_min": 180.0,
-      "x_max": 203.0,
-      "y_min": 176.0,
-      "y_max": 198.0
+    {
+      "text": "무 2학년",
+      "confidence": 0.6504644155502319,
+      "coordinates": {
+        "x_min": 153.0,
+        "x_max": 184.0,
+        "y_min": 135.0,
+        "y_max": 179.0
+      },
+      "row": 3,
+      "column": 1
     },
-    "row": 3,
-    "column": 2
-  },
-  {
-    "text": "수",
-    "confidence": 0.9999649524688721,
-    "coordinates": {
-      "x_min": 246.0,
-      "x_max": 264.0,
-      "y_min": 178.0,
-      "y_max": 197.0
+    {
+      "text": "화 2학년",
+      "confidence": 0.9995794892311096,
+      "coordinates": {
+        "x_min": 284.0,
+        "x_max": 315.0,
+        "y_min": 132.0,
+        "y_max": 180.0
+      },
+      "row": 3,
+      "column": 2
     },
-    "row": 3,
-    "column": 3
-  },
-  {
-    "text": "목",
-    "confidence": 0.999911904335022,
-    "coordinates": {
-      "x_min": 309.0,
-      "x_max": 328.0,
-      "y_min": 177.0,
-      "y_max": 197.0
+    {
+      "text": "금 2학년",
+      "confidence": 0.9962496161460876,
+      "coordinates": {
+        "x_min": 683.0,
+        "x_max": 715.0,
+        "y_min": 134.0,
+        "y_max": 179.0
+      },
+      "row": 3,
+      "column": 3
     },
-    "row": 3,
-    "column": 4
-  },
-  {
-    "text": "금",
-    "confidence": 0.9999275207519531,
-    "coordinates": {
-      "x_min": 374.0,
-      "x_max": 391.0,
-      "y_min": 180.0,
-      "y_max": 199.0
+    {
+      "text": "시간",
+      "confidence": 0.999984622001648,
+      "coordinates": {
+        "x_min": 36.0,
+        "x_max": 58.0,
+        "y_min": 148.0,
+        "y_max": 164.0
+      },
+      "row": 4,
+      "column": 1
     },
-    "row": 3,
-    "column": 5
-  },
-  {
-    "text": "1교시",
-    "confidence": 0.9973443150520325,
-    "coordinates": {
-      "x_min": 45.0,
-      "x_max": 83.0,
-      "y_min": 221.0,
-      "y_max": 240.0
+    {
+      "text": "교",
+      "confidence": 0.5885313153266907,
+      "coordinates": {
+        "x_min": 77.0,
+        "x_max": 96.0,
+        "y_min": 152.0,
+        "y_max": 160.0
+      },
+      "row": 4,
+      "column": 2
     },
-    "row": 4,
-    "column": 1
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9998283386230469,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 142.0,
-      "y_min": 220.0,
-      "y_max": 240.0
+    {
+      "text": "1학년",
+      "confidence": 0.9036171436309814,
+      "coordinates": {
+        "x_min": 108.0,
+        "x_max": 142.0,
+        "y_min": 162.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 3
     },
-    "row": 4,
-    "column": 2
-  },
-  {
-    "text": "사회",
-    "confidence": 0.9999173879623413,
-    "coordinates": {
-      "x_min": 176.0,
-      "x_max": 206.0,
-      "y_min": 222.0,
-      "y_max": 238.0
+    {
+      "text": "3학년",
+      "confidence": 0.9999098181724548,
+      "coordinates": {
+        "x_min": 197.0,
+        "x_max": 228.0,
+        "y_min": 165.0,
+        "y_max": 179.0
+      },
+      "row": 4,
+      "column": 4
     },
-    "row": 4,
-    "column": 3
-  },
-  {
-    "text": "도덕",
-    "confidence": 0.9999187588691711,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 270.0,
-      "y_min": 220.0,
-      "y_max": 239.0
+    {
+      "text": "1학년",
+      "confidence": 0.9987075924873352,
+      "coordinates": {
+        "x_min": 242.0,
+        "x_max": 272.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 5
     },
-    "row": 4,
-    "column": 4
-  },
-  {
-    "text": "영어",
-    "confidence": 0.9999546408653259,
-    "coordinates": {
-      "x_min": 304.0,
-      "x_max": 334.0,
-      "y_min": 220.0,
-      "y_max": 241.0
+    {
+      "text": "3학년",
+      "confidence": 0.9998366236686707,
+      "coordinates": {
+        "x_min": 328.0,
+        "x_max": 361.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 6
     },
-    "row": 4,
-    "column": 5
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9997899532318115,
-    "coordinates": {
-      "x_min": 366.0,
-      "x_max": 400.0,
-      "y_min": 218.0,
-      "y_max": 241.0
+    {
+      "text": "1학년",
+      "confidence": 0.9955079555511475,
+      "coordinates": {
+        "x_min": 374.0,
+        "x_max": 406.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 7
     },
-    "row": 4,
-    "column": 6
-  },
-  {
-    "text": "2교시",
-    "confidence": 0.9997932314872742,
-    "coordinates": {
-      "x_min": 42.0,
-      "x_max": 83.0,
-      "y_min": 272.0,
-      "y_max": 289.0
+    {
+      "text": "2학년",
+      "confidence": 0.9997758865356445,
+      "coordinates": {
+        "x_min": 418.0,
+        "x_max": 450.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 8
     },
-    "row": 5,
-    "column": 1
-  },
-  {
-    "text": "국어",
-    "confidence": 0.9999412894248962,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 141.0,
-      "y_min": 271.0,
-      "y_max": 289.0
+    {
+      "text": "3학년",
+      "confidence": 0.9984326958656311,
+      "coordinates": {
+        "x_min": 462.0,
+        "x_max": 493.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 9
     },
-    "row": 5,
-    "column": 2
-  },
-  {
-    "text": "음악",
-    "confidence": 0.995622992515564,
-    "coordinates": {
-      "x_min": 175.0,
-      "x_max": 207.0,
-      "y_min": 272.0,
-      "y_max": 290.0
+    {
+      "text": "1학년",
+      "confidence": 0.996684730052948,
+      "coordinates": {
+        "x_min": 505.0,
+        "x_max": 537.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 10
     },
-    "row": 5,
-    "column": 3
-  },
-  {
-    "text": "과학",
-    "confidence": 0.9999865293502808,
-    "coordinates": {
-      "x_min": 240.0,
-      "x_max": 269.0,
-      "y_min": 273.0,
-      "y_max": 288.0
+    {
+      "text": "2학년",
+      "confidence": 0.9998407363891602,
+      "coordinates": {
+        "x_min": 549.0,
+        "x_max": 580.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 11
     },
-    "row": 5,
-    "column": 4
-  },
-  {
-    "text": "미술",
-    "confidence": 0.9998385906219482,
-    "coordinates": {
-      "x_min": 301.0,
-      "x_max": 335.0,
-      "y_min": 269.0,
-      "y_max": 291.0
+    {
+      "text": "3학년",
+      "confidence": 0.9963507056236267,
+      "coordinates": {
+        "x_min": 593.0,
+        "x_max": 625.0,
+        "y_min": 162.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 12
     },
-    "row": 5,
-    "column": 5
-  },
-  {
-    "text": "국어",
-    "confidence": 0.9999282956123352,
-    "coordinates": {
-      "x_min": 367.0,
-      "x_max": 398.0,
-      "y_min": 270.0,
-      "y_max": 289.0
+    {
+      "text": "1학년",
+      "confidence": 0.9990236759185791,
+      "coordinates": {
+        "x_min": 640.0,
+        "x_max": 671.0,
+        "y_min": 165.0,
+        "y_max": 180.0
+      },
+      "row": 4,
+      "column": 13
     },
-    "row": 5,
-    "column": 6
-  },
-  {
-    "text": "3교시",
-    "confidence": 0.9996366500854492,
-    "coordinates": {
-      "x_min": 40.0,
-      "x_max": 85.0,
-      "y_min": 318.0,
-      "y_max": 339.0
+    {
+      "text": "3학년",
+      "confidence": 0.9998774528503418,
+      "coordinates": {
+        "x_min": 727.0,
+        "x_max": 758.0,
+        "y_min": 165.0,
+        "y_max": 179.0
+      },
+      "row": 4,
+      "column": 14
     },
-    "row": 6,
-    "column": 1
-  },
-  {
-    "text": "미술",
-    "confidence": 0.9999185800552368,
-    "coordinates": {
-      "x_min": 109.0,
-      "x_max": 142.0,
-      "y_min": 320.0,
-      "y_max": 339.0
+    {
+      "text": "D9:00 C9:50",
+      "confidence": 0.9407665133476257,
+      "coordinates": {
+        "x_min": 34.0,
+        "x_max": 66.0,
+        "y_min": 212.0,
+        "y_max": 241.0
+      },
+      "row": 5,
+      "column": 1
     },
-    "row": 6,
-    "column": 2
-  },
-  {
-    "text": "국어",
-    "confidence": 0.9999420046806335,
-    "coordinates": {
-      "x_min": 173.0,
-      "x_max": 207.0,
-      "y_min": 318.0,
-      "y_max": 339.0
+    {
+      "text": "물용역할 4102 주현남",
+      "confidence": 0.662891685962677,
+      "coordinates": {
+        "x_min": 237.0,
+        "x_max": 276.0,
+        "y_min": 232.0,
+        "y_max": 292.0
+      },
+      "row": 6,
+      "column": 1
     },
-    "row": 6,
-    "column": 3
-  },
-  {
-    "text": "영어",
-    "confidence": 0.9999772906303406,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 270.0,
-      "y_min": 320.0,
-      "y_max": 340.0
+    {
+      "text": "지적실무 402 김도군",
+      "confidence": 0.9742467999458313,
+      "coordinates": {
+        "x_min": 326.0,
+        "x_max": 364.0,
+        "y_min": 233.0,
+        "y_max": 292.0
+      },
+      "row": 6,
+      "column": 2
     },
-    "row": 6,
-    "column": 4
-  },
-  {
-    "text": "음악",
-    "confidence": 0.9989185333251953,
-    "coordinates": {
-      "x_min": 303.0,
-      "x_max": 335.0,
-      "y_min": 320.0,
-      "y_max": 340.0
+    {
+      "text": "몰물역학 연습 4102 주현남",
+      "confidence": 0.9484639167785645,
+      "coordinates": {
+        "x_min": 502.0,
+        "x_max": 541.0,
+        "y_min": 227.0,
+        "y_max": 300.0
+      },
+      "row": 6,
+      "column": 3
     },
-    "row": 6,
-    "column": 5
-  },
-  {
-    "text": "미술",
-    "confidence": 0.9998373985290527,
-    "coordinates": {
-      "x_min": 367.0,
-      "x_max": 398.0,
-      "y_min": 320.0,
-      "y_max": 339.0
+    {
+      "text": "싱주도 프르젝트 4어1 불의현",
+      "confidence": 0.6840999126434326,
+      "coordinates": {
+        "x_min": 546.0,
+        "x_max": 583.0,
+        "y_min": 227.0,
+        "y_max": 299.0
+      },
+      "row": 6,
+      "column": 4
     },
-    "row": 6,
-    "column": 6
-  },
-  {
-    "text": "4교시",
-    "confidence": 0.9998587965965271,
-    "coordinates": {
-      "x_min": 42.0,
-      "x_max": 84.0,
-      "y_min": 369.0,
-      "y_max": 387.0
+    {
+      "text": "건설영어 {1 4301 김순목",
+      "confidence": 0.779390811920166,
+      "coordinates": {
+        "x_min": 678.0,
+        "x_max": 719.0,
+        "y_min": 226.0,
+        "y_max": 300.0
+      },
+      "row": 6,
+      "column": 5
     },
-    "row": 7,
-    "column": 1
-  },
-  {
-    "text": "사회",
-    "confidence": 0.9998379349708557,
-    "coordinates": {
-      "x_min": 109.0,
-      "x_max": 141.0,
-      "y_min": 368.0,
-      "y_max": 388.0
+    {
+      "text": "CAT 기초 1102 이졸철",
+      "confidence": 0.7989916205406189,
+      "coordinates": {
+        "x_min": 374.0,
+        "x_max": 404.0,
+        "y_min": 265.0,
+        "y_max": 337.0
+      },
+      "row": 7,
+      "column": 1
     },
-    "row": 7,
-    "column": 2
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9997221231460571,
-    "coordinates": {
-      "x_min": 176.0,
-      "x_max": 207.0,
-      "y_min": 370.0,
-      "y_max": 386.0
+    {
+      "text": "전설 재료학 45071 김교식",
+      "confidence": 0.7044671177864075,
+      "coordinates": {
+        "x_min": 418.0,
+        "x_max": 448.0,
+        "y_min": 265.0,
+        "y_max": 335.0
+      },
+      "row": 7,
+      "column": 2
     },
-    "row": 7,
-    "column": 3
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9998713731765747,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 271.0,
-      "y_min": 369.0,
-      "y_max": 388.0
+    {
+      "text": "조직이해 대인관계 4102 서문한",
+      "confidence": 0.8053444027900696,
+      "coordinates": {
+        "x_min": 635.0,
+        "x_max": 675.0,
+        "y_min": 263.0,
+        "y_max": 334.0
+      },
+      "row": 7,
+      "column": 3
     },
-    "row": 7,
-    "column": 4
-  },
-  {
-    "text": "영어",
-    "confidence": 0.9999546408653259,
-    "coordinates": {
-      "x_min": 304.0,
-      "x_max": 334.0,
-      "y_min": 368.0,
-      "y_max": 389.0
+    {
+      "text": "멕센기초",
+      "confidence": 0.8930873870849609,
+      "coordinates": {
+        "x_min": 722.0,
+        "x_max": 762.0,
+        "y_min": 271.0,
+        "y_max": 285.0
+      },
+      "row": 7,
+      "column": 4
     },
-    "row": 7,
-    "column": 5
-  },
-  {
-    "text": "사회",
-    "confidence": 0.9995265007019043,
-    "coordinates": {
-      "x_min": 367.0,
-      "x_max": 398.0,
-      "y_min": 369.0,
-      "y_max": 388.0
+    {
+      "text": "1000 ~10:50",
+      "confidence": 0.977654755115509,
+      "coordinates": {
+        "x_min": 32.0,
+        "x_max": 67.0,
+        "y_min": 285.0,
+        "y_max": 316.0
+      },
+      "row": 8,
+      "column": 1
     },
-    "row": 7,
-    "column": 6
-  },
-  {
-    "text": "5교시",
-    "confidence": 0.9997020363807678,
-    "coordinates": {
-      "x_min": 42.0,
-      "x_max": 83.0,
-      "y_min": 419.0,
-      "y_max": 438.0
+    {
+      "text": "트목제도 2 4302 김드군",
+      "confidence": 0.7229827046394348,
+      "coordinates": {
+        "x_min": 195.0,
+        "x_max": 231.0,
+        "y_min": 302.0,
+        "y_max": 374.0
+      },
+      "row": 9,
+      "column": 1
     },
-    "row": 8,
-    "column": 1
-  },
-  {
-    "text": "과학",
-    "confidence": 0.999988317489624,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 142.0,
-      "y_min": 418.0,
-      "y_max": 438.0
+    {
+      "text": "지반 환경실부 1302 활의현",
+      "confidence": 0.9204228520393372,
+      "coordinates": {
+        "x_min": 457.0,
+        "x_max": 498.0,
+        "y_min": 300.0,
+        "y_max": 374.0
+      },
+      "row": 9,
+      "column": 2
     },
-    "row": 8,
-    "column": 2
-  },
-  {
-    "text": "체육",
-    "confidence": 0.9979133605957031,
-    "coordinates": {
-      "x_min": 174.0,
-      "x_max": 207.0,
-      "y_min": 419.0,
-      "y_max": 438.0
+    {
+      "text": "김교식",
+      "confidence": 0.9978664517402649,
+      "coordinates": {
+        "x_min": 728.0,
+        "x_max": 757.0,
+        "y_min": 315.0,
+        "y_max": 329.0
+      },
+      "row": 10,
+      "column": 1
     },
-    "row": 8,
-    "column": 3
-  },
-  {
-    "text": "국어",
-    "confidence": 0.9999024868011475,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 270.0,
-      "y_min": 419.0,
-      "y_max": 438.0
+    {
+      "text": "11:00 -11:50",
+      "confidence": 0.9331946969032288,
+      "coordinates": {
+        "x_min": 31.0,
+        "x_max": 67.0,
+        "y_min": 359.0,
+        "y_max": 390.0
+      },
+      "row": 11,
+      "column": 1
     },
-    "row": 8,
-    "column": 4
-  },
-  {
-    "text": "도덕",
-    "confidence": 0.9999702572822571,
-    "coordinates": {
-      "x_min": 304.0,
-      "x_max": 335.0,
-      "y_min": 418.0,
-      "y_max": 438.0
+    {
+      "text": "3",
+      "confidence": 0.9999465942382812,
+      "coordinates": {
+        "x_min": 84.0,
+        "x_max": 92.0,
+        "y_min": 370.0,
+        "y_max": 380.0
+      },
+      "row": 12,
+      "column": 1
     },
-    "row": 8,
-    "column": 5
-  },
-  {
-    "text": "과학",
-    "confidence": 0.9999919533729553,
-    "coordinates": {
-      "x_min": 368.0,
-      "x_max": 399.0,
-      "y_min": 418.0,
-      "y_max": 438.0
+    {
+      "text": "삼수도 4102 밤의현",
+      "confidence": 0.8642604351043701,
+      "coordinates": {
+        "x_min": 111.0,
+        "x_max": 139.0,
+        "y_min": 384.0,
+        "y_max": 442.0
+      },
+      "row": 12,
+      "column": 2
     },
-    "row": 8,
-    "column": 6
-  },
-  {
-    "text": "6교시",
-    "confidence": 0.9998984932899475,
-    "coordinates": {
-      "x_min": 42.0,
-      "x_max": 84.0,
-      "y_min": 468.0,
-      "y_max": 486.0
+    {
+      "text": "구조역학 리 4501 최진흐",
+      "confidence": 0.8529383540153503,
+      "coordinates": {
+        "x_min": 148.0,
+        "x_max": 187.0,
+        "y_min": 376.0,
+        "y_max": 448.0
+      },
+      "row": 12,
+      "column": 3
     },
-    "row": 9,
-    "column": 1
-  },
-  {
-    "text": "일어",
-    "confidence": 0.9998774528503418,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 141.0,
-      "y_min": 467.0,
-      "y_max": 487.0
+    {
+      "text": "기초 토질역학 4102 김석주",
+      "confidence": 0.9397954344749451,
+      "coordinates": {
+        "x_min": 238.0,
+        "x_max": 276.0,
+        "y_min": 377.0,
+        "y_max": 449.0
+      },
+      "row": 12,
+      "column": 4
     },
-    "row": 9,
-    "column": 2
-  },
-  {
-    "text": "가정",
-    "confidence": 0.9997928142547607,
-    "coordinates": {
-      "x_min": 175.0,
-      "x_max": 207.0,
-      "y_min": 468.0,
-      "y_max": 487.0
+    {
+      "text": "지적학 4501 김도군",
+      "confidence": 0.8767058253288269,
+      "coordinates": {
+        "x_min": 287.0,
+        "x_max": 315.0,
+        "y_min": 384.0,
+        "y_max": 441.0
+      },
+      "row": 12,
+      "column": 5
     },
-    "row": 9,
-    "column": 3
-  },
-  {
-    "text": "창체",
-    "confidence": 0.9991671442985535,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 270.0,
-      "y_min": 468.0,
-      "y_max": 487.0
+    {
+      "text": "전설기초 수학 4102 권음성",
+      "confidence": 0.7430353164672852,
+      "coordinates": {
+        "x_min": 503.0,
+        "x_max": 543.0,
+        "y_min": 376.0,
+        "y_max": 449.0
+      },
+      "row": 12,
+      "column": 6
     },
-    "row": 9,
-    "column": 4
-  },
-  {
-    "text": "국어",
-    "confidence": 0.9999275803565979,
-    "coordinates": {
-      "x_min": 301.0,
-      "x_max": 334.0,
-      "y_min": 465.0,
-      "y_max": 488.0
+    {
+      "text": "지적 측량학 4501 김도군",
+      "confidence": 0.7487611174583435,
+      "coordinates": {
+        "x_min": 553.0,
+        "x_max": 580.0,
+        "y_min": 376.0,
+        "y_max": 449.0
+      },
+      "row": 12,
+      "column": 7
     },
-    "row": 9,
-    "column": 5
-  },
-  {
-    "text": "음악",
-    "confidence": 0.9969121217727661,
-    "coordinates": {
-      "x_min": 369.0,
-      "x_max": 399.0,
-      "y_min": 468.0,
-      "y_max": 487.0
+    {
+      "text": "트질역학 영어회화 시험 1 4102 430 김순목 김석주",
+      "confidence": 0.625721275806427,
+      "coordinates": {
+        "x_min": 636.0,
+        "x_max": 718.0,
+        "y_min": 375.0,
+        "y_max": 449.0
+      },
+      "row": 12,
+      "column": 8
     },
-    "row": 9,
-    "column": 6
-  },
-  {
-    "text": "7교시",
-    "confidence": 0.9992669224739075,
-    "coordinates": {
-      "x_min": 43.0,
-      "x_max": 84.0,
-      "y_min": 517.0,
-      "y_max": 536.0
+    {
+      "text": "1200 -12:50",
+      "confidence": 0.9769816994667053,
+      "coordinates": {
+        "x_min": 30.0,
+        "x_max": 67.0,
+        "y_min": 434.0,
+        "y_max": 466.0
+      },
+      "row": 13,
+      "column": 1
     },
-    "row": 10,
-    "column": 1
-  },
-  {
-    "text": "한문",
-    "confidence": 0.9997305274009705,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 141.0,
-      "y_min": 516.0,
-      "y_max": 536.0
+    {
+      "text": "1300 ~13:50",
+      "confidence": 0.9746201634407043,
+      "coordinates": {
+        "x_min": 30.0,
+        "x_max": 67.0,
+        "y_min": 509.0,
+        "y_max": 541.0
+      },
+      "row": 14,
+      "column": 1
     },
-    "row": 10,
-    "column": 2
-  },
-  {
-    "text": "기술",
-    "confidence": 0.9999184608459473,
-    "coordinates": {
-      "x_min": 173.0,
-      "x_max": 207.0,
-      "y_min": 514.0,
-      "y_max": 537.0
+    {
+      "text": "14:00 ~1450",
+      "confidence": 0.9729830622673035,
+      "coordinates": {
+        "x_min": 30.0,
+        "x_max": 68.0,
+        "y_min": 585.0,
+        "y_max": 616.0
+      },
+      "row": 15,
+      "column": 1
     },
-    "row": 10,
-    "column": 3
-  },
-  {
-    "text": "창체",
-    "confidence": 0.9991671442985535,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 270.0,
-      "y_min": 517.0,
-      "y_max": 536.0
+    {
+      "text": "살푸도 연술 4102 관의현",
+      "confidence": 0.6851751208305359,
+      "coordinates": {
+        "x_min": 112.0,
+        "x_max": 139.0,
+        "y_min": 601.0,
+        "y_max": 672.0
+      },
+      "row": 16,
+      "column": 1
     },
-    "row": 10,
-    "column": 4
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9998844861984253,
-    "coordinates": {
-      "x_min": 303.0,
-      "x_max": 336.0,
-      "y_min": 517.0,
-      "y_max": 536.0
+    {
+      "text": "구조역학 리연습 4501 최진흐",
+      "confidence": 0.7394748330116272,
+      "coordinates": {
+        "x_min": 148.0,
+        "x_max": 188.0,
+        "y_min": 600.0,
+        "y_max": 670.0
+      },
+      "row": 16,
+      "column": 2
     },
-    "row": 10,
-    "column": 5
-  },
-  {
-    "text": "한문",
-    "confidence": 0.9997208714485168,
-    "coordinates": {
-      "x_min": 367.0,
-      "x_max": 398.0,
-      "y_min": 517.0,
-      "y_max": 536.0
+    {
+      "text": "철근론크 리트리 4301 최진로",
+      "confidence": 0.7642170786857605,
+      "coordinates": {
+        "x_min": 281.0,
+        "x_max": 322.0,
+        "y_min": 598.0,
+        "y_max": 670.0
+      },
+      "row": 16,
+      "column": 3
     },
-    "row": 10,
-    "column": 6
-  },
-  {
-    "text": "8교시",
-    "confidence": 0.9997716546058655,
-    "coordinates": {
-      "x_min": 41.0,
-      "x_max": 83.0,
-      "y_min": 567.0,
-      "y_max": 586.0
+    {
+      "text": "기초 측량학 4102 김도군",
+      "confidence": 0.9740552306175232,
+      "coordinates": {
+        "x_min": 507.0,
+        "x_max": 537.0,
+        "y_min": 601.0,
+        "y_max": 672.0
+      },
+      "row": 16,
+      "column": 4
     },
-    "row": 11,
-    "column": 1
-  },
-  {
-    "text": "음악",
-    "confidence": 0.9991539716720581,
-    "coordinates": {
-      "x_min": 109.0,
-      "x_max": 142.0,
-      "y_min": 565.0,
-      "y_max": 588.0
+    {
+      "text": "지적법 4502 권용성",
+      "confidence": 0.7557015419006348,
+      "coordinates": {
+        "x_min": 595.0,
+        "x_max": 626.0,
+        "y_min": 600.0,
+        "y_max": 658.0
+      },
+      "row": 16,
+      "column": 5
     },
-    "row": 11,
-    "column": 2
-  }
+    {
+      "text": "기즈 우리닥 4102 긴교식",
+      "confidence": 0.8037813305854797,
+      "coordinates": {
+        "x_min": 243.0,
+        "x_max": 272.0,
+        "y_min": 638.0,
+        "y_max": 709.0
+      },
+      "row": 17,
+      "column": 1
+    },
+    {
+      "text": "건설 재료학 4502 김석주",
+      "confidence": 0.9490334987640381,
+      "coordinates": {
+        "x_min": 331.0,
+        "x_max": 360.0,
+        "y_min": 637.0,
+        "y_max": 710.0
+      },
+      "row": 17,
+      "column": 2
+    },
+    {
+      "text": "건설재료 시험 4302 김석주",
+      "confidence": 0.9841472506523132,
+      "coordinates": {
+        "x_min": 724.0,
+        "x_max": 762.0,
+        "y_min": 636.0,
+        "y_max": 710.0
+      },
+      "row": 17,
+      "column": 3
+    },
+    {
+      "text": "15:00 -15:50",
+      "confidence": 0.9528576135635376,
+      "coordinates": {
+        "x_min": 30.0,
+        "x_max": 67.0,
+        "y_min": 660.0,
+        "y_max": 690.0
+      },
+      "row": 18,
+      "column": 1
+    },
+    {
+      "text": "교양선택",
+      "confidence": 0.9978824853897095,
+      "coordinates": {
+        "x_min": 413.0,
+        "x_max": 454.0,
+        "y_min": 702.0,
+        "y_max": 716.0
+      },
+      "row": 19,
+      "column": 1
+    },
+    {
+      "text": "16:00 ~16:50",
+      "confidence": 0.9868218302726746,
+      "coordinates": {
+        "x_min": 30.0,
+        "x_max": 68.0,
+        "y_min": 734.0,
+        "y_max": 764.0
+      },
+      "row": 20,
+      "column": 1
+    },
+    {
+      "text": "감구조 공학 1302 최진흐",
+      "confidence": 0.8426377773284912,
+      "coordinates": {
+        "x_min": 198.0,
+        "x_max": 228.0,
+        "y_min": 749.0,
+        "y_max": 822.0
+      },
+      "row": 21,
+      "column": 1
+    },
+    {
+      "text": "시곱사례 면구1 4502 서문관",
+      "confidence": 0.8476952910423279,
+      "coordinates": {
+        "x_min": 591.0,
+        "x_max": 629.0,
+        "y_min": 749.0,
+        "y_max": 824.0
+      },
+      "row": 21,
+      "column": 2
+    },
+    {
+      "text": "17:00 ~17:50",
+      "confidence": 0.9493229389190674,
+      "coordinates": {
+        "x_min": 30.0,
+        "x_max": 68.0,
+        "y_min": 808.0,
+        "y_max": 840.0
+      },
+      "row": 22,
+      "column": 1
+    }
+  ],
+  22,
+  14
 ]

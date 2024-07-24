@@ -3,4 +3,4 @@ from transformers import pipeline
 
 pipe = pipeline("image-to-text", model="ddobokki/ko-trocr")
 
-print(pipe('C:\\Users\\admin\\OneDrive\\OCR-PROJECT\\OCR\\OCR5-5.png'))
+print(pipe('https://help.miricanvas.com/hc/article_attachments/900001490243/__________._8.png'))

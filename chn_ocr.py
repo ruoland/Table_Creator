@@ -110,13 +110,16 @@ def identify_rows_and_columns(merged_data, row_threshold=10):
     if current_row:
         rows.append(sorted(current_row, key=lambda x: x['coordinates']['x_min']))
     
+    # Find the maximum number of columns
+    max_columns = max(len(row) for row in rows)
+    
     # Assign row and column numbers
     for row_idx, row in enumerate(rows):
         for col_idx, item in enumerate(row):
             item['row'] = row_idx + 1
             item['column'] = col_idx + 1
     
-    return [item for row in rows for item in row]
+    return [item for row in rows for item in row], len(rows), max_columns
 def print_low_confidence_words(ocr_data, threshold=0.9):
     low_confidence_words = [item for item in ocr_data if item['confidence'] < threshold]
     low_confidence_words.sort(key=lambda x: x['confidence'])  # 인식률 오름차순 정렬
@@ -125,10 +128,45 @@ def print_low_confidence_words(ocr_data, threshold=0.9):
     for item in low_confidence_words:
         print(f"텍스트: {item['text']}, 인식률: {item['confidence']:.2f}, "
               f"위치: [{int(item['coordinates']['x_min'])},{int(item['coordinates']['y_min'])}]")
+def calculate_table_dimensions(merged_data):
+    if not merged_data:
+        return None
 
+    # 초기값 설정
+    min_x = min_y = float('inf')
+    max_x = max_y = float('-inf')
+
+    for item in merged_data:
+        coords = item['coordinates']
+        min_x = min(min_x, coords['x_min'])
+        min_y = min(min_y, coords['y_min'])
+        max_x = max(max_x, coords['x_max'])
+        max_y = max(max_y, coords['y_max'])
+
+    # 가장 낮은 위치의 박스 찾기
+    lowest_box = max(merged_data, key=lambda x: x['coordinates']['y_max'])
+
+    # 가장 먼 거리의 박스 찾기
+    farthest_box = max(merged_data, key=lambda x: x['coordinates']['x_max'])
+
+    return {
+        'table_width': max_x - min_x,
+        'table_height': max_y - min_y,
+        'lowest_box': {
+            'text': lowest_box['text'],
+            'coordinates': lowest_box['coordinates']
+        },
+        'farthest_box': {
+            'text': farthest_box['text'],
+            'coordinates': farthest_box['coordinates']
+        }
+    }
 if __name__ == "__main__":
-    input_image = "OCR/OCR4.png"
-    output_image = "results/OCR4_with_merged_boxes.png"
+    folder = "OCR/"
+    type = "College/"
+    results = "results/"
+    input_image = folder+ type+"ocr3.jpg"
+    output_image = results +type+"orc3.jpg"
 
     # 사용자 입력 받기
     vertical_threshold = int(input("세로 방향 병합 임계값(픽셀)을 입력하세요: "))
@@ -156,8 +194,3 @@ if __name__ == "__main__":
 
     # 인식률이 낮은 단어들만 출력
     print_low_confidence_words(merged_data)
-
-# 결과 확인 (선택사항)
-with open('results/ocr_results_merged.json', 'r', encoding='utf-8') as f:
-    loaded_data = json.load(f)
-    print(json.dumps(loaded_data[:2], ensure_ascii=False, indent=2))

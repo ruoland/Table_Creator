@@ -1,15 +1,5 @@
 [
   {
-    "text": "3반 시간표",
-    "confidence": 0.9997355937957764,
-    "coordinates": {
-      "x_min": 218.0,
-      "x_max": 386.0,
-      "y_min": 41.0,
-      "y_max": 148.0
-    }
-  },
-  {
     "text": "미리초 |학기 U",
     "confidence": 0.5723560452461243,
     "coordinates": {
@@ -17,7 +7,9 @@
       "x_max": 202.0,
       "y_min": 42.0,
       "y_max": 151.0
-    }
+    },
+    "row": 1,
+    "column": 1
   },
   {
     "text": "1학년",
@@ -27,7 +19,21 @@
       "x_max": 268.0,
       "y_min": 42.0,
       "y_max": 68.0
-    }
+    },
+    "row": 1,
+    "column": 2
+  },
+  {
+    "text": "3반 시간표",
+    "confidence": 0.9997355937957764,
+    "coordinates": {
+      "x_min": 218.0,
+      "x_max": 386.0,
+      "y_min": 41.0,
+      "y_max": 148.0
+    },
+    "row": 1,
+    "column": 3
   },
   {
     "text": "-",
@@ -37,27 +43,9 @@
       "x_max": 351.0,
       "y_min": 53.0,
       "y_max": 58.0
-    }
-  },
-  {
-    "text": "화",
-    "confidence": 0.9995649456977844,
-    "coordinates": {
-      "x_min": 180.0,
-      "x_max": 203.0,
-      "y_min": 176.0,
-      "y_max": 198.0
-    }
-  },
-  {
-    "text": "목",
-    "confidence": 0.999911904335022,
-    "coordinates": {
-      "x_min": 309.0,
-      "x_max": 328.0,
-      "y_min": 177.0,
-      "y_max": 197.0
-    }
+    },
+    "row": 2,
+    "column": 1
   },
   {
     "text": "월",
@@ -67,7 +55,21 @@
       "x_max": 134.0,
       "y_min": 178.0,
       "y_max": 197.0
-    }
+    },
+    "row": 3,
+    "column": 1
+  },
+  {
+    "text": "화",
+    "confidence": 0.9995649456977844,
+    "coordinates": {
+      "x_min": 180.0,
+      "x_max": 203.0,
+      "y_min": 176.0,
+      "y_max": 198.0
+    },
+    "row": 3,
+    "column": 2
   },
   {
     "text": "수",
@@ -77,7 +79,21 @@
       "x_max": 264.0,
       "y_min": 178.0,
       "y_max": 197.0
-    }
+    },
+    "row": 3,
+    "column": 3
+  },
+  {
+    "text": "목",
+    "confidence": 0.999911904335022,
+    "coordinates": {
+      "x_min": 309.0,
+      "x_max": 328.0,
+      "y_min": 177.0,
+      "y_max": 197.0
+    },
+    "row": 3,
+    "column": 4
   },
   {
     "text": "금",
@@ -87,47 +103,9 @@
       "x_max": 391.0,
       "y_min": 180.0,
       "y_max": 199.0
-    }
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9997899532318115,
-    "coordinates": {
-      "x_min": 366.0,
-      "x_max": 400.0,
-      "y_min": 218.0,
-      "y_max": 241.0
-    }
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9998283386230469,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 142.0,
-      "y_min": 220.0,
-      "y_max": 240.0
-    }
-  },
-  {
-    "text": "도덕",
-    "confidence": 0.9999187588691711,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 270.0,
-      "y_min": 220.0,
-      "y_max": 239.0
-    }
-  },
-  {
-    "text": "영어",
-    "confidence": 0.9999546408653259,
-    "coordinates": {
-      "x_min": 304.0,
-      "x_max": 334.0,
-      "y_min": 220.0,
-      "y_max": 241.0
-    }
+    },
+    "row": 3,
+    "column": 5
   },
   {
     "text": "1교시",
@@ -137,7 +115,21 @@
       "x_max": 83.0,
       "y_min": 221.0,
       "y_max": 240.0
-    }
+    },
+    "row": 4,
+    "column": 1
+  },
+  {
+    "text": "수학",
+    "confidence": 0.9998283386230469,
+    "coordinates": {
+      "x_min": 110.0,
+      "x_max": 142.0,
+      "y_min": 220.0,
+      "y_max": 240.0
+    },
+    "row": 4,
+    "column": 2
   },
   {
     "text": "사회",
@@ -147,37 +139,45 @@
       "x_max": 206.0,
       "y_min": 222.0,
       "y_max": 238.0
-    }
+    },
+    "row": 4,
+    "column": 3
   },
   {
-    "text": "미술",
-    "confidence": 0.9998385906219482,
+    "text": "도덕",
+    "confidence": 0.9999187588691711,
     "coordinates": {
-      "x_min": 301.0,
-      "x_max": 335.0,
-      "y_min": 269.0,
-      "y_max": 291.0
-    }
+      "x_min": 239.0,
+      "x_max": 270.0,
+      "y_min": 220.0,
+      "y_max": 239.0
+    },
+    "row": 4,
+    "column": 4
   },
   {
-    "text": "국어",
-    "confidence": 0.9999282956123352,
+    "text": "영어",
+    "confidence": 0.9999546408653259,
     "coordinates": {
-      "x_min": 367.0,
-      "x_max": 398.0,
-      "y_min": 270.0,
-      "y_max": 289.0
-    }
+      "x_min": 304.0,
+      "x_max": 334.0,
+      "y_min": 220.0,
+      "y_max": 241.0
+    },
+    "row": 4,
+    "column": 5
   },
   {
-    "text": "국어",
-    "confidence": 0.9999412894248962,
+    "text": "수학",
+    "confidence": 0.9997899532318115,
     "coordinates": {
-      "x_min": 110.0,
-      "x_max": 141.0,
-      "y_min": 271.0,
-      "y_max": 289.0
-    }
+      "x_min": 366.0,
+      "x_max": 400.0,
+      "y_min": 218.0,
+      "y_max": 241.0
+    },
+    "row": 4,
+    "column": 6
   },
   {
     "text": "2교시",
@@ -187,7 +187,21 @@
       "x_max": 83.0,
       "y_min": 272.0,
       "y_max": 289.0
-    }
+    },
+    "row": 5,
+    "column": 1
+  },
+  {
+    "text": "국어",
+    "confidence": 0.9999412894248962,
+    "coordinates": {
+      "x_min": 110.0,
+      "x_max": 141.0,
+      "y_min": 271.0,
+      "y_max": 289.0
+    },
+    "row": 5,
+    "column": 2
   },
   {
     "text": "음악",
@@ -197,7 +211,9 @@
       "x_max": 207.0,
       "y_min": 272.0,
       "y_max": 290.0
-    }
+    },
+    "row": 5,
+    "column": 3
   },
   {
     "text": "과학",
@@ -207,7 +223,33 @@
       "x_max": 269.0,
       "y_min": 273.0,
       "y_max": 288.0
-    }
+    },
+    "row": 5,
+    "column": 4
+  },
+  {
+    "text": "미술",
+    "confidence": 0.9998385906219482,
+    "coordinates": {
+      "x_min": 301.0,
+      "x_max": 335.0,
+      "y_min": 269.0,
+      "y_max": 291.0
+    },
+    "row": 5,
+    "column": 5
+  },
+  {
+    "text": "국어",
+    "confidence": 0.9999282956123352,
+    "coordinates": {
+      "x_min": 367.0,
+      "x_max": 398.0,
+      "y_min": 270.0,
+      "y_max": 289.0
+    },
+    "row": 5,
+    "column": 6
   },
   {
     "text": "3교시",
@@ -217,17 +259,9 @@
       "x_max": 85.0,
       "y_min": 318.0,
       "y_max": 339.0
-    }
-  },
-  {
-    "text": "국어",
-    "confidence": 0.9999420046806335,
-    "coordinates": {
-      "x_min": 173.0,
-      "x_max": 207.0,
-      "y_min": 318.0,
-      "y_max": 339.0
-    }
+    },
+    "row": 6,
+    "column": 1
   },
   {
     "text": "미술",
@@ -237,7 +271,21 @@
       "x_max": 142.0,
       "y_min": 320.0,
       "y_max": 339.0
-    }
+    },
+    "row": 6,
+    "column": 2
+  },
+  {
+    "text": "국어",
+    "confidence": 0.9999420046806335,
+    "coordinates": {
+      "x_min": 173.0,
+      "x_max": 207.0,
+      "y_min": 318.0,
+      "y_max": 339.0
+    },
+    "row": 6,
+    "column": 3
   },
   {
     "text": "영어",
@@ -247,7 +295,9 @@
       "x_max": 270.0,
       "y_min": 320.0,
       "y_max": 340.0
-    }
+    },
+    "row": 6,
+    "column": 4
   },
   {
     "text": "음악",
@@ -257,7 +307,9 @@
       "x_max": 335.0,
       "y_min": 320.0,
       "y_max": 340.0
-    }
+    },
+    "row": 6,
+    "column": 5
   },
   {
     "text": "미술",
@@ -267,27 +319,9 @@
       "x_max": 398.0,
       "y_min": 320.0,
       "y_max": 339.0
-    }
-  },
-  {
-    "text": "사회",
-    "confidence": 0.9998379349708557,
-    "coordinates": {
-      "x_min": 109.0,
-      "x_max": 141.0,
-      "y_min": 368.0,
-      "y_max": 388.0
-    }
-  },
-  {
-    "text": "영어",
-    "confidence": 0.9999546408653259,
-    "coordinates": {
-      "x_min": 304.0,
-      "x_max": 334.0,
-      "y_min": 368.0,
-      "y_max": 389.0
-    }
+    },
+    "row": 6,
+    "column": 6
   },
   {
     "text": "4교시",
@@ -297,27 +331,21 @@
       "x_max": 84.0,
       "y_min": 369.0,
       "y_max": 387.0
-    }
-  },
-  {
-    "text": "수학",
-    "confidence": 0.9998713731765747,
-    "coordinates": {
-      "x_min": 239.0,
-      "x_max": 271.0,
-      "y_min": 369.0,
-      "y_max": 388.0
-    }
+    },
+    "row": 7,
+    "column": 1
   },
   {
     "text": "사회",
-    "confidence": 0.9995265007019043,
+    "confidence": 0.9998379349708557,
     "coordinates": {
-      "x_min": 367.0,
-      "x_max": 398.0,
-      "y_min": 369.0,
+      "x_min": 109.0,
+      "x_max": 141.0,
+      "y_min": 368.0,
       "y_max": 388.0
-    }
+    },
+    "row": 7,
+    "column": 2
   },
   {
     "text": "수학",
@@ -327,37 +355,45 @@
       "x_max": 207.0,
       "y_min": 370.0,
       "y_max": 386.0
-    }
+    },
+    "row": 7,
+    "column": 3
   },
   {
-    "text": "과학",
-    "confidence": 0.999988317489624,
+    "text": "수학",
+    "confidence": 0.9998713731765747,
     "coordinates": {
-      "x_min": 110.0,
-      "x_max": 142.0,
-      "y_min": 418.0,
-      "y_max": 438.0
-    }
+      "x_min": 239.0,
+      "x_max": 271.0,
+      "y_min": 369.0,
+      "y_max": 388.0
+    },
+    "row": 7,
+    "column": 4
   },
   {
-    "text": "도덕",
-    "confidence": 0.9999702572822571,
+    "text": "영어",
+    "confidence": 0.9999546408653259,
     "coordinates": {
       "x_min": 304.0,
-      "x_max": 335.0,
-      "y_min": 418.0,
-      "y_max": 438.0
-    }
+      "x_max": 334.0,
+      "y_min": 368.0,
+      "y_max": 389.0
+    },
+    "row": 7,
+    "column": 5
   },
   {
-    "text": "과학",
-    "confidence": 0.9999919533729553,
+    "text": "사회",
+    "confidence": 0.9995265007019043,
     "coordinates": {
-      "x_min": 368.0,
-      "x_max": 399.0,
-      "y_min": 418.0,
-      "y_max": 438.0
-    }
+      "x_min": 367.0,
+      "x_max": 398.0,
+      "y_min": 369.0,
+      "y_max": 388.0
+    },
+    "row": 7,
+    "column": 6
   },
   {
     "text": "5교시",
@@ -367,7 +403,21 @@
       "x_max": 83.0,
       "y_min": 419.0,
       "y_max": 438.0
-    }
+    },
+    "row": 8,
+    "column": 1
+  },
+  {
+    "text": "과학",
+    "confidence": 0.999988317489624,
+    "coordinates": {
+      "x_min": 110.0,
+      "x_max": 142.0,
+      "y_min": 418.0,
+      "y_max": 438.0
+    },
+    "row": 8,
+    "column": 2
   },
   {
     "text": "체육",
@@ -377,7 +427,9 @@
       "x_max": 207.0,
       "y_min": 419.0,
       "y_max": 438.0
-    }
+    },
+    "row": 8,
+    "column": 3
   },
   {
     "text": "국어",
@@ -387,27 +439,33 @@
       "x_max": 270.0,
       "y_min": 419.0,
       "y_max": 438.0
-    }
+    },
+    "row": 8,
+    "column": 4
   },
   {
-    "text": "국어",
-    "confidence": 0.9999275803565979,
+    "text": "도덕",
+    "confidence": 0.9999702572822571,
     "coordinates": {
-      "x_min": 301.0,
-      "x_max": 334.0,
-      "y_min": 465.0,
-      "y_max": 488.0
-    }
+      "x_min": 304.0,
+      "x_max": 335.0,
+      "y_min": 418.0,
+      "y_max": 438.0
+    },
+    "row": 8,
+    "column": 5
   },
   {
-    "text": "일어",
-    "confidence": 0.9998774528503418,
+    "text": "과학",
+    "confidence": 0.9999919533729553,
     "coordinates": {
-      "x_min": 110.0,
-      "x_max": 141.0,
-      "y_min": 467.0,
-      "y_max": 487.0
-    }
+      "x_min": 368.0,
+      "x_max": 399.0,
+      "y_min": 418.0,
+      "y_max": 438.0
+    },
+    "row": 8,
+    "column": 6
   },
   {
     "text": "6교시",
@@ -417,7 +475,21 @@
       "x_max": 84.0,
       "y_min": 468.0,
       "y_max": 486.0
-    }
+    },
+    "row": 9,
+    "column": 1
+  },
+  {
+    "text": "일어",
+    "confidence": 0.9998774528503418,
+    "coordinates": {
+      "x_min": 110.0,
+      "x_max": 141.0,
+      "y_min": 467.0,
+      "y_max": 487.0
+    },
+    "row": 9,
+    "column": 2
   },
   {
     "text": "가정",
@@ -427,7 +499,9 @@
       "x_max": 207.0,
       "y_min": 468.0,
       "y_max": 487.0
-    }
+    },
+    "row": 9,
+    "column": 3
   },
   {
     "text": "창체",
@@ -437,7 +511,21 @@
       "x_max": 270.0,
       "y_min": 468.0,
       "y_max": 487.0
-    }
+    },
+    "row": 9,
+    "column": 4
+  },
+  {
+    "text": "국어",
+    "confidence": 0.9999275803565979,
+    "coordinates": {
+      "x_min": 301.0,
+      "x_max": 334.0,
+      "y_min": 465.0,
+      "y_max": 488.0
+    },
+    "row": 9,
+    "column": 5
   },
   {
     "text": "음악",
@@ -447,27 +535,9 @@
       "x_max": 399.0,
       "y_min": 468.0,
       "y_max": 487.0
-    }
-  },
-  {
-    "text": "기술",
-    "confidence": 0.9999184608459473,
-    "coordinates": {
-      "x_min": 173.0,
-      "x_max": 207.0,
-      "y_min": 514.0,
-      "y_max": 537.0
-    }
-  },
-  {
-    "text": "한문",
-    "confidence": 0.9997305274009705,
-    "coordinates": {
-      "x_min": 110.0,
-      "x_max": 141.0,
-      "y_min": 516.0,
-      "y_max": 536.0
-    }
+    },
+    "row": 9,
+    "column": 6
   },
   {
     "text": "7교시",
@@ -477,7 +547,33 @@
       "x_max": 84.0,
       "y_min": 517.0,
       "y_max": 536.0
-    }
+    },
+    "row": 10,
+    "column": 1
+  },
+  {
+    "text": "한문",
+    "confidence": 0.9997305274009705,
+    "coordinates": {
+      "x_min": 110.0,
+      "x_max": 141.0,
+      "y_min": 516.0,
+      "y_max": 536.0
+    },
+    "row": 10,
+    "column": 2
+  },
+  {
+    "text": "기술",
+    "confidence": 0.9999184608459473,
+    "coordinates": {
+      "x_min": 173.0,
+      "x_max": 207.0,
+      "y_min": 514.0,
+      "y_max": 537.0
+    },
+    "row": 10,
+    "column": 3
   },
   {
     "text": "창체",
@@ -487,7 +583,9 @@
       "x_max": 270.0,
       "y_min": 517.0,
       "y_max": 536.0
-    }
+    },
+    "row": 10,
+    "column": 4
   },
   {
     "text": "수학",
@@ -497,7 +595,9 @@
       "x_max": 336.0,
       "y_min": 517.0,
       "y_max": 536.0
-    }
+    },
+    "row": 10,
+    "column": 5
   },
   {
     "text": "한문",
@@ -507,17 +607,9 @@
       "x_max": 398.0,
       "y_min": 517.0,
       "y_max": 536.0
-    }
-  },
-  {
-    "text": "음악",
-    "confidence": 0.9991539716720581,
-    "coordinates": {
-      "x_min": 109.0,
-      "x_max": 142.0,
-      "y_min": 565.0,
-      "y_max": 588.0
-    }
+    },
+    "row": 10,
+    "column": 6
   },
   {
     "text": "8교시",
@@ -527,6 +619,20 @@
       "x_max": 83.0,
       "y_min": 567.0,
       "y_max": 586.0
-    }
+    },
+    "row": 11,
+    "column": 1
+  },
+  {
+    "text": "음악",
+    "confidence": 0.9991539716720581,
+    "coordinates": {
+      "x_min": 109.0,
+      "x_max": 142.0,
+      "y_min": 565.0,
+      "y_max": 588.0
+    },
+    "row": 11,
+    "column": 2
   }
 ]

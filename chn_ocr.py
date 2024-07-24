@@ -94,7 +94,29 @@ def draw_boxes(image_path, ocr_data, output_path):
         )
 
     image.save(output_path)
-
+def identify_rows_and_columns(merged_data, row_threshold=10):
+    # Sort by y_min to group into rows
+    sorted_data = sorted(merged_data, key=lambda x: x['coordinates']['y_min'])
+    
+    rows = []
+    current_row = []
+    for item in sorted_data:
+        if not current_row or abs(item['coordinates']['y_min'] - current_row[-1]['coordinates']['y_min']) <= row_threshold:
+            current_row.append(item)
+        else:
+            rows.append(sorted(current_row, key=lambda x: x['coordinates']['x_min']))
+            current_row = [item]
+    
+    if current_row:
+        rows.append(sorted(current_row, key=lambda x: x['coordinates']['x_min']))
+    
+    # Assign row and column numbers
+    for row_idx, row in enumerate(rows):
+        for col_idx, item in enumerate(row):
+            item['row'] = row_idx + 1
+            item['column'] = col_idx + 1
+    
+    return [item for row in rows for item in row]
 def print_low_confidence_words(ocr_data, threshold=0.9):
     low_confidence_words = [item for item in ocr_data if item['confidence'] < threshold]
     low_confidence_words.sort(key=lambda x: x['confidence'])  # 인식률 오름차순 정렬
@@ -105,8 +127,8 @@ def print_low_confidence_words(ocr_data, threshold=0.9):
               f"위치: [{int(item['coordinates']['x_min'])},{int(item['coordinates']['y_min'])}]")
 
 if __name__ == "__main__":
-    input_image = "OCR/OCR8.jpg"
-    output_image = "results/OCR7_with_merged_boxes.png"
+    input_image = "OCR/OCR4.png"
+    output_image = "results/OCR4_with_merged_boxes.png"
 
     # 사용자 입력 받기
     vertical_threshold = int(input("세로 방향 병합 임계값(픽셀)을 입력하세요: "))
@@ -117,14 +139,16 @@ if __name__ == "__main__":
     # OCR 결과 파싱
     parsed_data = parse_ocr_result(ocr_data)
     
-    # 박스 병합
+   # 박스 병합
     merged_data = merge_boxes(parsed_data, vertical_threshold)
     
+    # 행과 열 식별
+    merged_data_with_positions = identify_rows_and_columns(merged_data)
+    
     # JSON 파일로 저장
-    save_to_json(merged_data, 'results/ocr_results_merged.json')
+    save_to_json(merged_data_with_positions, 'results/ocr_results_merged_with_positions.json')
     
-    print("병합된 OCR 결과가 성공적으로 JSON 파일로 변환되었습니다.")
-    
+    print("행과 열 정보가 포함된 병합된 OCR 결과가 JSON 파일로 변환되었습니다.")
     # 병합된 박스 그리기
     draw_boxes(input_image, merged_data, output_image)
     

@@ -165,8 +165,8 @@ if __name__ == "__main__":
     folder = "OCR/"
     type = "College/"
     results = "results/"
-    input_image = folder+ type+"ocr3.jpg"
-    output_image = results +type+"orc3.jpg"
+    input_image = folder+ type+"ocr2.jpg"
+    output_image = results +type+"orc2.jpg"
 
     # 사용자 입력 받기
     vertical_threshold = int(input("세로 방향 병합 임계값(픽셀)을 입력하세요: "))

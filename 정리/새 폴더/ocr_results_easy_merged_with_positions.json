@@ -1,0 +1,422 @@
+[
+  {
+    "text": "이교시 09,00-09,30",
+    "confidence": 0.6145020317053744,
+    "coordinates": {
+      "x_min": 39,
+      "x_max": 107,
+      "y_min": 57,
+      "y_max": 85
+    },
+    "row": 1,
+    "column": 1
+  },
+  {
+    "text": "내움합코딩1 백수진 소프트301",
+    "confidence": 0.1346023900277088,
+    "coordinates": {
+      "x_min": 151,
+      "x_max": 249,
+      "y_min": 49,
+      "y_max": 83
+    },
+    "row": 1,
+    "column": 2
+  },
+  {
+    "text": "금움공학(원어) 항장하 미디어403",
+    "confidence": 0.5561913884587311,
+    "coordinates": {
+      "x_min": 367,
+      "x_max": 467,
+      "y_min": 47,
+      "y_max": 83
+    },
+    "row": 1,
+    "column": 3
+  },
+  {
+    "text": "노동법1 신동운 대학원동216",
+    "confidence": 0.8098262548446655,
+    "coordinates": {
+      "x_min": 583,
+      "x_max": 691,
+      "y_min": 47,
+      "y_max": 83
+    },
+    "row": 1,
+    "column": 4
+  },
+  {
+    "text": "데이터마이넣((절) 2공521",
+    "confidence": 0.12126939952714923,
+    "coordinates": {
+      "x_min": 801,
+      "x_max": 897,
+      "y_min": 51,
+      "y_max": 83
+    },
+    "row": 1,
+    "column": 5
+  },
+  {
+    "text": "기계학습과인공신경망(-내움합) 운석현 소프트416",
+    "confidence": 0.3295371006337286,
+    "coordinates": {
+      "x_min": 1015,
+      "x_max": 1183,
+      "y_min": 47,
+      "y_max": 83
+    },
+    "row": 1,
+    "column": 6
+  },
+  {
+    "text": "관현악실기4 이재준",
+    "confidence": 0.6854984682907611,
+    "coordinates": {
+      "x_min": 1233,
+      "x_max": 1303,
+      "y_min": 51,
+      "y_max": 83
+    },
+    "row": 1,
+    "column": 7
+  },
+  {
+    "text": "02교시 09;30-10-00",
+    "confidence": 0.7051769506388404,
+    "coordinates": {
+      "x_min": 39,
+      "x_max": 107,
+      "y_min": 117,
+      "y_max": 147
+    },
+    "row": 2,
+    "column": 1
+  },
+  {
+    "text": "03교시 10,00-10.30",
+    "confidence": 0.7304201238998783,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 105,
+      "y_min": 179,
+      "y_max": 207
+    },
+    "row": 3,
+    "column": 1
+  },
+  {
+    "text": "관현악실기4 이재준",
+    "confidence": 0.5741578936576843,
+    "coordinates": {
+      "x_min": 1231,
+      "x_max": 1303,
+      "y_min": 171,
+      "y_max": 205
+    },
+    "row": 3,
+    "column": 2
+  },
+  {
+    "text": "04교시 1030~1100",
+    "confidence": 0.12193087209661244,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 103,
+      "y_min": 239,
+      "y_max": 269
+    },
+    "row": 4,
+    "column": 1
+  },
+  {
+    "text": "생산운영관리 임현정 상경209",
+    "confidence": 0.49758143223391066,
+    "coordinates": {
+      "x_min": 369,
+      "x_max": 455,
+      "y_min": 231,
+      "y_max": 267
+    },
+    "row": 4,
+    "column": 2
+  },
+  {
+    "text": "05교시 1100-1130",
+    "confidence": 0.22861476275686296,
+    "coordinates": {
+      "x_min": 43,
+      "x_max": 101,
+      "y_min": 301,
+      "y_max": 329
+    },
+    "row": 5,
+    "column": 1
+  },
+  {
+    "text": "작곡실기4 백영은",
+    "confidence": 0.29029087552880933,
+    "coordinates": {
+      "x_min": 1233,
+      "x_max": 1291,
+      "y_min": 295,
+      "y_max": 327
+    },
+    "row": 5,
+    "column": 2
+  },
+  {
+    "text": "06고시 11.30~1200",
+    "confidence": 0.3755437135696411,
+    "coordinates": {
+      "x_min": 43,
+      "x_max": 103,
+      "y_min": 361,
+      "y_max": 389
+    },
+    "row": 6,
+    "column": 1
+  },
+  {
+    "text": "07고시 12,00-1230",
+    "confidence": 0.5834946073707475,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 103,
+      "y_min": 421,
+      "y_max": 451
+    },
+    "row": 7,
+    "column": 1
+  },
+  {
+    "text": "경영과학기 (원어) 운승철 상경506",
+    "confidence": 0.39804072104134863,
+    "coordinates": {
+      "x_min": 151,
+      "x_max": 239,
+      "y_min": 417,
+      "y_max": 449
+    },
+    "row": 7,
+    "column": 2
+  },
+  {
+    "text": "수리경제학 선주연 상경415",
+    "confidence": 0.8517970359013878,
+    "coordinates": {
+      "x_min": 583,
+      "x_max": 667,
+      "y_min": 415,
+      "y_max": 449
+    },
+    "row": 7,
+    "column": 3
+  },
+  {
+    "text": "수리경제학 선주연 상경415",
+    "confidence": 0.9956552347772745,
+    "coordinates": {
+      "x_min": 799,
+      "x_max": 883,
+      "y_min": 413,
+      "y_max": 449
+    },
+    "row": 7,
+    "column": 4
+  },
+  {
+    "text": "08교시 12.30-1300",
+    "confidence": 0.6798922419548035,
+    "coordinates": {
+      "x_min": 40,
+      "x_max": 105,
+      "y_min": 483,
+      "y_max": 514
+    },
+    "row": 8,
+    "column": 1
+  },
+  {
+    "text": "09고시 13,00-13.30",
+    "confidence": 0.7050540550840743,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 105,
+      "y_min": 545,
+      "y_max": 573
+    },
+    "row": 9,
+    "column": 1
+  },
+  {
+    "text": "게임프로그래망(-내움합) 정범연 소프트310",
+    "confidence": 0.30408881750460615,
+    "coordinates": {
+      "x_min": 1015,
+      "x_max": 1151,
+      "y_min": 535,
+      "y_max": 571
+    },
+    "row": 9,
+    "column": 2
+  },
+  {
+    "text": "10교시 1330~14 00",
+    "confidence": 0.9630439470148231,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 105,
+      "y_min": 605,
+      "y_max": 635
+    },
+    "row": 10,
+    "column": 1
+  },
+  {
+    "text": "금움공화(원어) 확장하 미디어403",
+    "confidence": 0.3156056144589036,
+    "coordinates": {
+      "x_min": 799,
+      "x_max": 899,
+      "y_min": 597,
+      "y_max": 633
+    },
+    "row": 10,
+    "column": 2
+  },
+  {
+    "text": "1교시 14,00-1430",
+    "confidence": 0.43871351220974125,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 105,
+      "y_min": 665,
+      "y_max": 695
+    },
+    "row": 11,
+    "column": 1
+  },
+  {
+    "text": "12교시 14;30-15.00",
+    "confidence": 0.9039245843887329,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 105,
+      "y_min": 727,
+      "y_max": 757
+    },
+    "row": 12,
+    "column": 1
+  },
+  {
+    "text": "13교시 15,00-15;30",
+    "confidence": 0.7724960865266955,
+    "coordinates": {
+      "x_min": 41,
+      "x_max": 103,
+      "y_min": 789,
+      "y_max": 817
+    },
+    "row": 13,
+    "column": 1
+  },
+  {
+    "text": "경영과학기 (원어) 운승철 상경506",
+    "confidence": 0.4196971612949541,
+    "coordinates": {
+      "x_min": 369,
+      "x_max": 455,
+      "y_min": 783,
+      "y_max": 815
+    },
+    "row": 13,
+    "column": 2
+  },
+  {
+    "text": "파이씬프로그래망(-내움합) 운석현 소프트303",
+    "confidence": 0.4815726740441252,
+    "coordinates": {
+      "x_min": 583,
+      "x_max": 728,
+      "y_min": 783,
+      "y_max": 815
+    },
+    "row": 13,
+    "column": 3
+  },
+  {
+    "text": "1고시 1530-1500",
+    "confidence": 0.16011603490171622,
+    "coordinates": {
+      "x_min": 40,
+      "x_max": 105,
+      "y_min": 849,
+      "y_max": 880
+    },
+    "row": 14,
+    "column": 1
+  },
+  {
+    "text": "검색",
+    "confidence": 0.9948606125141326,
+    "coordinates": {
+      "x_min": 491,
+      "x_max": 521,
+      "y_min": 843,
+      "y_max": 863
+    },
+    "row": 14,
+    "column": 2
+  },
+  {
+    "text": "'2022년 |학기",
+    "confidence": 0.40633225762093383,
+    "coordinates": {
+      "x_min": 545,
+      "x_max": 633,
+      "y_min": 843,
+      "y_max": 863
+    },
+    "row": 14,
+    "column": 3
+  },
+  {
+    "text": "2021년 2학기",
+    "confidence": 0.9954640478563628,
+    "coordinates": {
+      "x_min": 657,
+      "x_max": 741,
+      "y_min": 843,
+      "y_max": 863
+    },
+    "row": 14,
+    "column": 4
+  },
+  {
+    "text": "시간표 공유",
+    "confidence": 0.9979947250602443,
+    "coordinates": {
+      "x_min": 799,
+      "x_max": 867,
+      "y_min": 843,
+      "y_max": 863
+    },
+    "row": 14,
+    "column": 5
+  },
+  {
+    "text": "다운로드",
+    "confidence": 0.9996001124382019,
+    "coordinates": {
+      "x_min": 913,
+      "x_max": 967,
+      "y_min": 843,
+      "y_max": 863
+    },
+    "row": 14,
+    "column": 6
+  }
+]

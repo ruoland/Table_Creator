@@ -116,7 +116,7 @@ def print_formatted_results(grid):
             print("  <빈 줄>\n")
 
 # 이미지와 폰트 경로
-image_path = 'C:\\Users\\admin\\OneDrive\\OCR-PROJECT\\OCR\\college\\ocr1.jpg'
+image_path = 'C:\\Users\\admin\\OneDrive\\OCR-PROJECT\\OCR\\young\\ocr4.png'
 font_path = 'C:\\Users\\admin\\OneDrive\\OCR-PROJECT\\NanumGothic.ttf'
 
 # 텍스트 영역 표시 및 인식

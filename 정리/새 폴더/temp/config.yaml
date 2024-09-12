@@ -1,5 +1,0 @@
-model_name: "microsoft/table-transformer-structure-recognition"
-languages: ['ko', 'en']
-image_path: "OCR5-4.png"
-output_csv_path: "timetable.csv"
-expected_shape: [8, 5]  # 예상되는 시간표 크기 (행, 열)

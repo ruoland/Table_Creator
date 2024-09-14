@@ -1,3 +1,10 @@
 enhanced_tables_dataset/
 table_dataset/
 OCR_preprocessed/
+output/
+table_dataset/
+table_dataset_coco/
+table_dataset_new_optio/
+table_dataset_opti2/
+table_dataset_yolo/
+__pycache__/

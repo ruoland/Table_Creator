@@ -117,6 +117,7 @@ def save_dataset_info(output_dir, dataset_info, stats):
     summary_stats = calculate_summary_stats(stats)
     with open(os.path.join(output_dir, 'summary_stats.json'), 'w', encoding='utf-8') as f:
         json.dump(summary_stats, f, indent=4, ensure_ascii=False)
+    
 if __name__ == "__main__":
     output_dir = 'table_dataset_yolo'
     num_images = 20000

@@ -1,7 +1,7 @@
 import random, string
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-from grrr_utils import *
-from grrr_constants import *
+from rollback_utils import *
+from rollback_constant import *
 from opti_calc import *
 
 def draw_shape(shape_draw, shape_type, size):

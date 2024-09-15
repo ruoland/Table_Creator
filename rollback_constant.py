@@ -113,7 +113,7 @@ EVENTS = ['입학식', '졸업식', '축제', '학술제', '취업박람회', '�
           '명사특강', '학부모초청행사', '연구성과발표회', '산학협력포럼']
 
 # 비율 조정을 위한 상수
-MERGED_CELL_RATIO = 0.6  # 병합된 셀의 비율
+MERGED_CELL_RATIO = 0.4  # 병합된 셀의 비율
 SHAPE_GENERATION_RATIO = 0.2  # 도형 생성 비율
 EMPTY_CELL_RATIO = 0.1  # 빈 셀의 비율
-IMPERFECT_RATIO = 0.1  # 불완전한 이미지 비율
+IMPERFECT_RATIO = 0.3  # 불완전한 이미지 비율

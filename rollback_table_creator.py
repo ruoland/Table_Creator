@@ -1,5 +1,7 @@
-import os
-import random
+import os, csv
+from datetime import datetime
+
+import random, json
 from tqdm import tqdm
 import numpy as np
 import logging
@@ -7,15 +9,27 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from concurrent.futures import ProcessPoolExecutor
 import yaml
 from opti_calc import *
-from grrr_draw import *
-from grrr_constants import *
-from grrr_utils import *
+from rollback_draw import *
+from rollback_constant import *
+from rollback_utils import *
 import itertools
 
 # 전역 카운터 생성
 global_counter = itertools.count(1)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+def generate_random_resolution():
+    width = random.randint(MIN_IMAGE_WIDTH, MAX_IMAGE_WIDTH)
+    height = random.randint(MIN_IMAGE_HEIGHT, MAX_IMAGE_HEIGHT)
+    
+    width = width - (width % 8)
+    height = height - (height % 8)
+    
+    return (width, height)
+
+def create_directory(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 def create_table(image_width, image_height, has_gap=False):
     cols = random.randint(MIN_COLS, MAX_COLS)
     rows = random.randint(MIN_ROWS, MAX_ROWS)
@@ -103,148 +117,233 @@ def load_last_image_id(output_dir):
             return data['last_image_id']
     except FileNotFoundError:
         return 0
-    
-def generate_yolo_labels(cells, table_bbox, image_width, image_height, rows, cols):
+def generate_yolo_and_coco_labels(cells, table_bbox, image_width, image_height, rows, cols, image_id):
     yolo_labels = []
-    merged_cells = [cell for cell in cells if len(cell) > 6]
+    coco_annotations = []
+    annotation_id = 1
 
-    cell_width = (table_bbox[2] - table_bbox[0]) / cols
-    cell_height = (table_bbox[3] - table_bbox[1]) / rows
-
-    # Row labels
+    # Row categories
     for row in range(rows):
-        row_cells = [cell for cell in cells if cell[4] == row and cell not in merged_cells]
+        row_cells = [cell for cell in cells if cell[4] == row]
         if row_cells:
             min_x = min(cell[0] for cell in row_cells)
             max_x = max(cell[2] for cell in row_cells)
             y = row_cells[0][1]
-            height = cell_height
+            height = row_cells[0][3] - row_cells[0][1]
+            coco_annotations.append({
+                "id": annotation_id,
+                "image_id": image_id,
+                "category_id": 3,  # Row category
+                "bbox": [min_x, y, max_x - min_x, height],
+                "area": (max_x - min_x) * height,
+                "iscrowd": 0,
+                "row": row
+            })
             yolo_labels.append(create_yolo_label(2, min_x, y, max_x - min_x, height, image_width, image_height))
+            annotation_id += 1
 
-    # Column labels
+    # Column categories
     for col in range(cols):
-        col_cells = [cell for cell in cells if cell[5] == col and cell not in merged_cells]
+        col_cells = [cell for cell in cells if cell[5] == col]
         if col_cells:
             min_y = min(cell[1] for cell in col_cells)
             max_y = max(cell[3] for cell in col_cells)
             x = col_cells[0][0]
-            width = cell_width
+            width = col_cells[0][2] - col_cells[0][0]
+            coco_annotations.append({
+                "id": annotation_id,
+                "image_id": image_id,
+                "category_id": 4,  # Column category
+                "bbox": [x, min_y, width, max_y - min_y],
+                "area": width * (max_y - min_y),
+                "iscrowd": 0,
+                "column": col
+            })
             yolo_labels.append(create_yolo_label(3, x, min_y, width, max_y - min_y, image_width, image_height))
+            annotation_id += 1
 
-    # Cell labels
+    # Cell annotations
     for cell in cells:
-        class_id = 1 if len(cell) > 6 else 0  # merged cell or normal cell
-        yolo_labels.append(create_yolo_label(class_id, cell[0], cell[1], cell[2] - cell[0], cell[3] - cell[1], image_width, image_height))
+        is_merged = len(cell) > 6
+        category_id = 2 if is_merged else 1  # 2 for merged cell, 1 for normal cell
+        width = cell[2] - cell[0]
+        height = cell[3] - cell[1]
+        coco_annotation = create_coco_annotation(
+            category_id, cell[0], cell[1], width, height, annotation_id, image_id,
+            row=cell[4], column=cell[5], is_merged=is_merged,
+            merged_rows=cell[6] if is_merged else None,
+            merged_cols=cell[7] if is_merged else None
+        )
+        coco_annotations.append(coco_annotation)
+        yolo_labels.append(create_yolo_label(category_id - 1, cell[0], cell[1], width, height, image_width, image_height))
+        annotation_id += 1
 
     # Table label
-    yolo_labels.append(create_yolo_label(4, table_bbox[0], table_bbox[1], table_bbox[2] - table_bbox[0], table_bbox[3] - table_bbox[1], image_width, image_height))
+    table_width = table_bbox[2] - table_bbox[0]
+    table_height = table_bbox[3] - table_bbox[1]
+    coco_annotations.append(create_coco_annotation(5, table_bbox[0], table_bbox[1], table_width, table_height, annotation_id, image_id))
+    yolo_labels.append(create_yolo_label(4, table_bbox[0], table_bbox[1], table_width, table_height, image_width, image_height))
 
-    return yolo_labels
+    return yolo_labels, coco_annotations
 def create_yolo_label(class_id, x, y, width, height, image_width, image_height):
     x_center = (x + width / 2) / image_width
     y_center = (y + height / 2) / image_height
     width = width / image_width
     height = height / image_height
     return f"{class_id} {x_center:.4f} {y_center:.4f} {width:.4f} {height:.4f}"
+def create_coco_annotation(category_id, x, y, width, height, annotation_id, image_id, row=None, column=None, is_merged=False, merged_rows=None, merged_cols=None):
+    annotation = {
+        "id": annotation_id,
+        "image_id": image_id,
+        "category_id": category_id + 1,
+        "bbox": [x, y, width, height],
+        "area": width * height,
+        "iscrowd": 0,
+        "row": row,
+        "column": column,
+        "is_merged": is_merged
+    }
+    if is_merged:
+        annotation["merged_rows"] = merged_rows
+        annotation["merged_cols"] = merged_cols
+    return annotation
 
 def generate_image_and_labels(image_id, resolution, bg_mode, has_gap, is_imperfect=False):
-    image_width, image_height = resolution
-    cols = random.randint(MIN_COLS, MAX_COLS)
-    rows = random.randint(MIN_ROWS, MAX_ROWS)
+    try:
+        image_width, image_height = resolution  # 랜덤 해상도 사용
 
-    cells, table_bbox, gap, rows, cols = create_table(image_width, image_height, has_gap)
-    
-    bg_color = random.choice(list(BACKGROUND_COLORS[bg_mode].values()))
-    img = Image.new('L', (image_width, image_height), color=bg_color)
-    draw = ImageDraw.Draw(img)
-    
-    line_widths, has_outer_lines = draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect)
-    
-    add_content_to_cells(draw, cells, random.choice(FONTS), bg_color)
-    if is_imperfect:
-        img = apply_imperfections(img, cells)
-    
-    yolo_labels = generate_yolo_labels(cells, table_bbox, image_width, image_height, rows, cols)
+        cols = random.randint(MIN_COLS, MAX_COLS)
+        rows = random.randint(MIN_ROWS, MAX_ROWS)
 
-    image_stats = {
-        'image_id': image_id,
-        'bg_mode': bg_mode,
-        'has_gap': has_gap,
-        'is_imperfect': is_imperfect,
-        'gap_size': gap,
-        'num_cells': len(cells),
-        'rows': rows,
-        'cols': cols,
-        'has_outer_lines': has_outer_lines,
-        'image_width': image_width,
-        'image_height': image_height,
-        'table_width': table_bbox[2] - table_bbox[0],
-        'table_height': table_bbox[3] - table_bbox[1],
-        'avg_cell_width': np.mean([cell[2] - cell[0] for cell in cells]),
-        'avg_cell_height': np.mean([cell[3] - cell[1] for cell in cells]),
-        'min_cell_width': min([cell[2] - cell[0] for cell in cells]),
-        'min_cell_height': min([cell[3] - cell[1] for cell in cells]),
-        'max_cell_width': max([cell[2] - cell[0] for cell in cells]),
-        'max_cell_height': max([cell[3] - cell[1] for cell in cells]),
-        'avg_line_width': np.mean(line_widths),
-        'min_line_width': min(line_widths),
-        'max_line_width': max(line_widths),
-        'num_merged_cells': sum(1 for cell in cells if len(cell) > 6)
-    }
-    
-    return img, yolo_labels, image_stats
+        cells, table_bbox, gap, rows, cols = create_table(image_width, image_height, has_gap)
+        
+        bg_color = random.choice(list(BACKGROUND_COLORS[bg_mode].values()))
+        img = Image.new('L', (image_width, image_height), color=bg_color)
+        draw = ImageDraw.Draw(img)
+        
+        line_widths, has_outer_lines = draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect)
+        
+        add_content_to_cells(draw, cells, random.choice(FONTS), bg_color)
+        if is_imperfect:
+            img = apply_imperfections(img, cells)
+        
+        yolo_labels, coco_annotations = generate_yolo_and_coco_labels(cells, table_bbox, image_width, image_height, rows, cols, image_id)
+
+        image_stats = {
+            'image_id': image_id,
+            'bg_mode': bg_mode,
+            'has_gap': has_gap,
+            'is_imperfect': is_imperfect,
+            'gap_size': gap,
+            'num_cells': len(cells),
+            'rows': rows,
+            'cols': cols,
+            'has_outer_lines': has_outer_lines,
+            'image_width': image_width,
+            'image_height': image_height,
+            'table_width': table_bbox[2] - table_bbox[0],
+            'table_height': table_bbox[3] - table_bbox[1],
+            'avg_cell_width': np.mean([cell[2] - cell[0] for cell in cells]),
+            'avg_cell_height': np.mean([cell[3] - cell[1] for cell in cells]),
+            'min_cell_width': min([cell[2] - cell[0] for cell in cells]),
+            'min_cell_height': min([cell[3] - cell[1] for cell in cells]),
+            'max_cell_width': max([cell[2] - cell[0] for cell in cells]),
+            'max_cell_height': max([cell[3] - cell[1] for cell in cells]),
+            'avg_line_width': np.mean(line_widths),
+            'min_line_width': min(line_widths),
+            'max_line_width': max(line_widths),
+            'num_merged_cells': sum(1 for cell in cells if len(cell) > 6)
+        }
+        
+        return img, yolo_labels, coco_annotations, image_stats
+    except Exception as e:
+        logger.error(f"Error generating image {image_id}: {str(e)}")
+        return None, None, None, None
 import gc
-def generate_large_dataset_in_batches(output_dir, total_num_images, batch_size=1000, imperfect_ratio=0.3, train_ratio=0.8, val_ratio=0):
-    last_id = load_last_image_id(output_dir)
-    if last_id == 0:
-        last_id = get_last_image_id(output_dir)
+def batch_dataset(output_dir, total_num_images, batch_size=1000, imperfect_ratio=0.3, train_ratio=0.8):
+    # 출력 디렉토리 생성
+    os.makedirs(output_dir, exist_ok=True)
     
-    global_counter = itertools.count(last_id + 1)
-    all_dataset_info = {subset: [] for subset in ['train', 'val', 'test']}
+    last_ids = load_last_image_ids(output_dir)
+    
+    all_dataset_info = {subset: [] for subset in ['train', 'val']}
     all_stats = []
     
-    for start in range(last_id, total_num_images, batch_size):
-        end = min(start + batch_size, total_num_images)
-        batch_dataset_info, batch_stats = generate_large_dataset(output_dir, end - start, imperfect_ratio, train_ratio, val_ratio, global_counter)
+    for subset in ['train', 'val']:
+        subset_total = int(total_num_images * (train_ratio if subset == 'train' else 1-train_ratio))
+        global_counter = itertools.count(last_ids[subset] + 1)
         
-        for subset in all_dataset_info:
+        for start in range(0, subset_total, batch_size):
+            end = min(start + batch_size, subset_total)
+            batch_dataset_info, batch_stats = process_dataset(
+                output_dir=output_dir, 
+                num_images=end - start, 
+                imperfect_ratio=imperfect_ratio,
+                global_counter=global_counter,
+                subset=subset
+            )
+            
             all_dataset_info[subset].extend(batch_dataset_info[subset])
-        all_stats.extend(batch_stats)
+            all_stats.extend(batch_stats)
+            
+            gc.collect()
         
-        gc.collect()
+        last_ids[subset] = next(global_counter) - 1
     
-    save_last_image_id(output_dir, next(global_counter) - 1)
+    save_last_image_id(output_dir, last_ids)
     save_dataset_info(output_dir, all_dataset_info, all_stats)
     return all_dataset_info
-def generate_large_dataset(output_dir, num_images, imperfect_ratio=0.3, train_ratio=0.8, val_ratio=0.1, global_counter=None):
-    create_directory(output_dir)
-    for subset in ['train', 'val', 'test']:
-        create_directory(os.path.join(output_dir, subset, 'images'))
-        create_directory(os.path.join(output_dir, subset, 'labels'))
-    
-    dataset_info = {subset: [] for subset in ['train', 'val', 'test']}
-    stats = []
 
+def save_last_image_id(output_dir, last_ids):
+    with open(os.path.join(output_dir, 'last_image_ids.json'), 'w') as f:
+        json.dump(last_ids, f)
+
+def load_last_image_ids(output_dir):
+    try:
+        with open(os.path.join(output_dir, 'last_image_ids.json'), 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {'train': 0, 'val': 0}
+def get_last_image_id(output_dir, subset):
+    last_id = 0
+    image_dir = os.path.join(output_dir, subset, 'images')
+    if os.path.exists(image_dir):
+        image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
+        if image_files:
+            last_file = max(image_files)
+            last_id = int(last_file[6:-4])  # 'table_00123.png' -> 123
+    return last_id
+def process_dataset(output_dir, num_images, imperfect_ratio=0.3, global_counter=None, subset='train'):
+    create_directory(output_dir)
+    create_directory(os.path.join(output_dir, subset, 'images'))
+    create_directory(os.path.join(output_dir, subset, 'labels'))
+    dataset_info = {subset: []}
+    stats = []
+    all_coco_annotations = []
     with ProcessPoolExecutor() as executor:
         futures = [
-            executor.submit(generate_image_and_labels, next(global_counter), 
-                            generate_random_resolution(), 
+            executor.submit(generate_image_and_labels, 
+                            next(global_counter), 
+                            generate_random_resolution(),
                             random.choice(['light', 'dark']), 
                             random.choice([True, False]), 
                             random.random() < imperfect_ratio)
             for _ in range(num_images)
         ]
         
-        for future in tqdm(futures, total=num_images, desc="Generating images"):
-            img, yolo_labels, image_stats = future.result()
-            subset = determine_subset(train_ratio, val_ratio)
+    for future in tqdm(futures, total=num_images, desc=f"{subset} 이미지 표 만드는 중..."):
+        img, yolo_labels, coco_annotations, image_stats = future.result()
+        if img is not None:
             image_stats['subset'] = subset
             save_image_and_labels(img, yolo_labels, image_stats, output_dir, subset)
             dataset_info[subset].append(image_stats)
             stats.append(image_stats)
+            all_coco_annotations.extend(coco_annotations)
 
-    save_dataset_info(output_dir, dataset_info, stats)
-    return dataset_info
+    save_coco_annotations(output_dir, dataset_info, all_coco_annotations, subset)
+    return dataset_info, stats
+
+
 def determine_subset(train_ratio, val_ratio):
     rand = random.random()
     if rand < train_ratio:
@@ -253,15 +352,65 @@ def determine_subset(train_ratio, val_ratio):
         return 'val'
     else:
         return 'test'
+def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
+    coco_data = {
+        "info": {
+            "description": f"Table Detection Dataset - {subset}",
+            "url": "",
+            "version": "1.0",
+            "year": datetime.now().year,
+            "contributor": "",
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        },
+        "licenses": [
+            {
+                "url": "",
+                "id": 1,
+                "name": "Unknown"
+            }
+        ],
+        "images": [],
+        "annotations": [],
+        "categories": [
+            {"id": 1, "name": "cell", "supercategory": "table"},
+            {"id": 2, "name": "merged_cell", "supercategory": "table"},
+            {"id": 3, "name": "row", "supercategory": "table"},
+            {"id": 4, "name": "column", "supercategory": "table"},
+            {"id": 5, "name": "table", "supercategory": "table"},
+            {"id": 6, "name": "row_category", "supercategory": "table"},
+            {"id": 7, "name": "column_category", "supercategory": "table"}
+        ]
+    }
+
+    image_ids = set()
+    for image_info in dataset_info[subset]:
+        coco_data["images"].append({
+            "id": image_info['image_id'],
+            "width": image_info['image_width'],
+            "height": image_info['image_height'],
+            "file_name": f"image_{image_info['image_id']:06d}.png",
+            "license": 1,
+            "flickr_url": "",
+            "coco_url": "",
+            "date_captured": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        })
+        image_ids.add(image_info['image_id'])
+
+    coco_data["annotations"] = [ann for ann in coco_annotations if ann["image_id"] in image_ids]
+
+    with open(os.path.join(output_dir, f'{subset}_annotations.json'), 'w') as f:
+        json.dump(coco_data, f)
+
 def save_image_and_labels(img, yolo_labels, image_stats, output_dir, subset):
-    img_filename = f"table_{image_stats['image_id']:06d}.png"
+    img_filename = f"image_{image_stats['image_id']:06d}.png"
     img_path = os.path.join(output_dir, subset, 'images', img_filename)
     img.save(img_path)
 
-    label_filename = f"table_{image_stats['image_id']:06d}.txt"
+    label_filename = f"image_{image_stats['image_id']:06d}.txt"
     label_path = os.path.join(output_dir, subset, 'labels', label_filename)
     with open(label_path, 'w') as f:
         f.write('\n'.join(yolo_labels))
+
 
 def save_dataset_info(output_dir, dataset_info, stats):
     total_images = sum(len(info) for info in dataset_info.values())
@@ -279,7 +428,6 @@ def save_dataset_info(output_dir, dataset_info, stats):
     yaml_content = {
         'train': os.path.join(output_dir, 'train', 'images'),
         'val': os.path.join(output_dir, 'val', 'images'),
-        'test': os.path.join(output_dir, 'test', 'images'),
         'nc': 5,
         'names': ['cell', 'merged_cell', 'row', 'column', 'table']
     }
@@ -295,12 +443,10 @@ def save_dataset_info(output_dir, dataset_info, stats):
     summary_stats = calculate_summary_stats(stats)
     with open(os.path.join(output_dir, 'summary_stats.json'), 'w', encoding='utf-8') as f:
         json.dump(summary_stats, f, indent=4, ensure_ascii=False)
-
 if __name__ == "__main__":
-    output_dir = 'table_dataset_new_opti22222o'
-    num_images = 20000
+    output_dir = 'table_dataset_real'
+    num_images = 10000
     imperfect_ratio = 0.1
     train_ratio = 0.8
-    val_ratio = 0.1
-    dataset_info = generate_large_dataset_in_batches(output_dir, num_images, imperfect_ratio=imperfect_ratio, train_ratio=train_ratio, val_ratio=val_ratio)
+    dataset_info = batch_dataset(output_dir, num_images, imperfect_ratio=imperfect_ratio, train_ratio=train_ratio)
     print("Dataset generation completed.")

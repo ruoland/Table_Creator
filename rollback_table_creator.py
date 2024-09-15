@@ -1,17 +1,16 @@
-import os, csv
-from datetime import datetime
+import os
 
-import random, json
+import random
 from tqdm import tqdm
 import numpy as np
 import logging
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from concurrent.futures import ProcessPoolExecutor
-import yaml
 from opti_calc import *
 from rollback_draw import *
 from rollback_constant import *
 from rollback_utils import *
+from rollback_files import *
 import itertools
 
 # 전역 카운터 생성
@@ -27,9 +26,7 @@ def generate_random_resolution():
     
     return (width, height)
 
-def create_directory(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+
 def create_table(image_width, image_height, has_gap=False):
     cols = random.randint(MIN_COLS, MAX_COLS)
     rows = random.randint(MIN_ROWS, MAX_ROWS)
@@ -46,7 +43,7 @@ def create_table(image_width, image_height, has_gap=False):
          row * cell_height + (gap if has_gap else 0),
          (col + 1) * cell_width - (gap if has_gap else 0),
          (row + 1) * cell_height - (gap if has_gap else 0),
-         row, col]
+         row, col, False]  # False는 병합되지 않은 셀을 의미
         for row in range(rows)
         for col in range(cols)
     ]
@@ -72,13 +69,12 @@ def merge_cells(cells, rows, cols):
             
             if not any(is_overlapping(merge_area, area) for area in merged_areas):
                 new_cell = [
-                    cells[start_row * cols + start_col][0],
-                    cells[start_row * cols + start_col][1],
-                    cells[(start_row + merge_rows - 1) * cols + (start_col + merge_cols - 1)][2],
-                    cells[(start_row + merge_rows - 1) * cols + (start_col + merge_cols - 1)][3],
-                    start_row, start_col, merge_rows, merge_cols
+                        cells[start_row * cols + start_col][0],
+                        cells[start_row * cols + start_col][1],
+                        cells[(start_row + merge_rows - 1) * cols + (start_col + merge_cols - 1)][2],
+                        cells[(start_row + merge_rows - 1) * cols + (start_col + merge_cols - 1)][3],
+                        start_row, start_col, True  # True는 병합된 셀을 의미
                 ]
-                
                 for r in range(start_row, start_row + merge_rows):
                     for c in range(start_col, start_col + merge_cols):
                         merged_cells[r * cols + c] = None
@@ -95,30 +91,8 @@ def is_overlapping(area1, area2):
     return not (area1[2] <= area2[0] or area1[0] >= area2[2] or
                 area1[3] <= area2[1] or area1[1] >= area2[3])
 
-def get_last_image_id(output_dir):
-    last_id = 0
-    for subset in ['train', 'val', 'test']:
-        image_dir = os.path.join(output_dir, subset, 'images')
-        if os.path.exists(image_dir):
-            image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
-            if image_files:
-                last_file = max(image_files)
-                last_id = max(last_id, int(last_file[6:-4]))  # 'table_00123.png' -> 123
-    return last_id
 
-def save_last_image_id(output_dir, last_id):
-    with open(os.path.join(output_dir, 'last_image_id.json'), 'w') as f:
-        json.dump({'last_image_id': last_id}, f)
-
-def load_last_image_id(output_dir):
-    try:
-        with open(os.path.join(output_dir, 'last_image_id.json'), 'r') as f:
-            data = json.load(f)
-            return data['last_image_id']
-    except FileNotFoundError:
-        return 0
-def generate_yolo_and_coco_labels(cells, table_bbox, image_width, image_height, rows, cols, image_id):
-    yolo_labels = []
+def generate_coco_annotations(cells, table_bbox, image_width, image_height, rows, cols, image_id):
     coco_annotations = []
     annotation_id = 1
 
@@ -136,10 +110,8 @@ def generate_yolo_and_coco_labels(cells, table_bbox, image_width, image_height, 
                 "category_id": 3,  # Row category
                 "bbox": [min_x, y, max_x - min_x, height],
                 "area": (max_x - min_x) * height,
-                "iscrowd": 0,
-                "row": row
+                "iscrowd": 0
             })
-            yolo_labels.append(create_yolo_label(2, min_x, y, max_x - min_x, height, image_width, image_height))
             annotation_id += 1
 
     # Column categories
@@ -156,41 +128,41 @@ def generate_yolo_and_coco_labels(cells, table_bbox, image_width, image_height, 
                 "category_id": 4,  # Column category
                 "bbox": [x, min_y, width, max_y - min_y],
                 "area": width * (max_y - min_y),
-                "iscrowd": 0,
-                "column": col
+                "iscrowd": 0
             })
-            yolo_labels.append(create_yolo_label(3, x, min_y, width, max_y - min_y, image_width, image_height))
             annotation_id += 1
 
     # Cell annotations
     for cell in cells:
-        is_merged = len(cell) > 6
+        is_merged = cell[6] if len(cell) > 6 else False  # 병합된 셀인지 여부
         category_id = 2 if is_merged else 1  # 2 for merged cell, 1 for normal cell
         width = cell[2] - cell[0]
         height = cell[3] - cell[1]
-        coco_annotation = create_coco_annotation(
-            category_id, cell[0], cell[1], width, height, annotation_id, image_id,
-            row=cell[4], column=cell[5], is_merged=is_merged,
-            merged_rows=cell[6] if is_merged else None,
-            merged_cols=cell[7] if is_merged else None
-        )
-        coco_annotations.append(coco_annotation)
-        yolo_labels.append(create_yolo_label(category_id - 1, cell[0], cell[1], width, height, image_width, image_height))
+        coco_annotations.append({
+            "id": annotation_id,
+            "image_id": image_id,
+            "category_id": category_id,
+            "bbox": [cell[0], cell[1], width, height],
+            "area": width * height,
+            "iscrowd": 0,
+            "is_merged": is_merged
+        })
         annotation_id += 1
 
     # Table label
     table_width = table_bbox[2] - table_bbox[0]
     table_height = table_bbox[3] - table_bbox[1]
-    coco_annotations.append(create_coco_annotation(5, table_bbox[0], table_bbox[1], table_width, table_height, annotation_id, image_id))
-    yolo_labels.append(create_yolo_label(4, table_bbox[0], table_bbox[1], table_width, table_height, image_width, image_height))
+    coco_annotations.append({
+        "id": annotation_id,
+        "image_id": image_id,
+        "category_id": 5,  # Table category
+        "bbox": [table_bbox[0], table_bbox[1], table_width, table_height],
+        "area": table_width * table_height,
+        "iscrowd": 0
+    })
 
-    return yolo_labels, coco_annotations
-def create_yolo_label(class_id, x, y, width, height, image_width, image_height):
-    x_center = (x + width / 2) / image_width
-    y_center = (y + height / 2) / image_height
-    width = width / image_width
-    height = height / image_height
-    return f"{class_id} {x_center:.4f} {y_center:.4f} {width:.4f} {height:.4f}"
+    return coco_annotations
+
 def create_coco_annotation(category_id, x, y, width, height, annotation_id, image_id, row=None, column=None, is_merged=False, merged_rows=None, merged_cols=None):
     annotation = {
         "id": annotation_id,
@@ -212,9 +184,6 @@ def generate_image_and_labels(image_id, resolution, bg_mode, has_gap, is_imperfe
     try:
         image_width, image_height = resolution  # 랜덤 해상도 사용
 
-        cols = random.randint(MIN_COLS, MAX_COLS)
-        rows = random.randint(MIN_ROWS, MAX_ROWS)
-
         cells, table_bbox, gap, rows, cols = create_table(image_width, image_height, has_gap)
         
         bg_color = random.choice(list(BACKGROUND_COLORS[bg_mode].values()))
@@ -227,7 +196,7 @@ def generate_image_and_labels(image_id, resolution, bg_mode, has_gap, is_imperfe
         if is_imperfect:
             img = apply_imperfections(img, cells)
         
-        yolo_labels, coco_annotations = generate_yolo_and_coco_labels(cells, table_bbox, image_width, image_height, rows, cols, image_id)
+        coco_annotations = generate_coco_annotations(cells, table_bbox, image_width, image_height, rows, cols, image_id)
 
         image_stats = {
             'image_id': image_id,
@@ -255,15 +224,18 @@ def generate_image_and_labels(image_id, resolution, bg_mode, has_gap, is_imperfe
             'num_merged_cells': sum(1 for cell in cells if len(cell) > 6)
         }
         
-        return img, yolo_labels, coco_annotations, image_stats
+        return img, coco_annotations, image_stats
     except Exception as e:
         logger.error(f"Error generating image {image_id}: {str(e)}")
         return None, None, None, None
-import gc
 def batch_dataset(output_dir, total_num_images, batch_size=1000, imperfect_ratio=0.3, train_ratio=0.8):
     # 출력 디렉토리 생성
     os.makedirs(output_dir, exist_ok=True)
     
+    for subset in ['train', 'val']:
+        os.makedirs(os.path.join(output_dir, subset, 'images'), exist_ok=True)
+        
+        
     last_ids = load_last_image_ids(output_dir)
     
     all_dataset_info = {subset: [] for subset in ['train', 'val']}
@@ -294,29 +266,10 @@ def batch_dataset(output_dir, total_num_images, batch_size=1000, imperfect_ratio
     save_dataset_info(output_dir, all_dataset_info, all_stats)
     return all_dataset_info
 
-def save_last_image_id(output_dir, last_ids):
-    with open(os.path.join(output_dir, 'last_image_ids.json'), 'w') as f:
-        json.dump(last_ids, f)
-
-def load_last_image_ids(output_dir):
-    try:
-        with open(os.path.join(output_dir, 'last_image_ids.json'), 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {'train': 0, 'val': 0}
-def get_last_image_id(output_dir, subset):
-    last_id = 0
-    image_dir = os.path.join(output_dir, subset, 'images')
-    if os.path.exists(image_dir):
-        image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
-        if image_files:
-            last_file = max(image_files)
-            last_id = int(last_file[6:-4])  # 'table_00123.png' -> 123
-    return last_id
 def process_dataset(output_dir, num_images, imperfect_ratio=0.3, global_counter=None, subset='train'):
     create_directory(output_dir)
     create_directory(os.path.join(output_dir, subset, 'images'))
-    create_directory(os.path.join(output_dir, subset, 'labels'))
+    
     dataset_info = {subset: []}
     stats = []
     all_coco_annotations = []
@@ -332,10 +285,10 @@ def process_dataset(output_dir, num_images, imperfect_ratio=0.3, global_counter=
         ]
         
     for future in tqdm(futures, total=num_images, desc=f"{subset} 이미지 표 만드는 중..."):
-        img, yolo_labels, coco_annotations, image_stats = future.result()
+        img, coco_annotations, image_stats = future.result()
         if img is not None:
             image_stats['subset'] = subset
-            save_image_and_labels(img, yolo_labels, image_stats, output_dir, subset)
+            save_image_and_annotations(img, image_stats, output_dir, subset)
             dataset_info[subset].append(image_stats)
             stats.append(image_stats)
             all_coco_annotations.extend(coco_annotations)
@@ -352,100 +305,11 @@ def determine_subset(train_ratio, val_ratio):
         return 'val'
     else:
         return 'test'
-def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
-    coco_data = {
-        "info": {
-            "description": f"Table Detection Dataset - {subset}",
-            "url": "",
-            "version": "1.0",
-            "year": datetime.now().year,
-            "contributor": "",
-            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        },
-        "licenses": [
-            {
-                "url": "",
-                "id": 1,
-                "name": "Unknown"
-            }
-        ],
-        "images": [],
-        "annotations": [],
-        "categories": [
-            {"id": 1, "name": "cell", "supercategory": "table"},
-            {"id": 2, "name": "merged_cell", "supercategory": "table"},
-            {"id": 3, "name": "row", "supercategory": "table"},
-            {"id": 4, "name": "column", "supercategory": "table"},
-            {"id": 5, "name": "table", "supercategory": "table"},
-            {"id": 6, "name": "row_category", "supercategory": "table"},
-            {"id": 7, "name": "column_category", "supercategory": "table"}
-        ]
-    }
-
-    image_ids = set()
-    for image_info in dataset_info[subset]:
-        coco_data["images"].append({
-            "id": image_info['image_id'],
-            "width": image_info['image_width'],
-            "height": image_info['image_height'],
-            "file_name": f"image_{image_info['image_id']:06d}.png",
-            "license": 1,
-            "flickr_url": "",
-            "coco_url": "",
-            "date_captured": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        })
-        image_ids.add(image_info['image_id'])
-
-    coco_data["annotations"] = [ann for ann in coco_annotations if ann["image_id"] in image_ids]
-
-    with open(os.path.join(output_dir, f'{subset}_annotations.json'), 'w') as f:
-        json.dump(coco_data, f)
-
-def save_image_and_labels(img, yolo_labels, image_stats, output_dir, subset):
-    img_filename = f"image_{image_stats['image_id']:06d}.png"
-    img_path = os.path.join(output_dir, subset, 'images', img_filename)
-    img.save(img_path)
-
-    label_filename = f"image_{image_stats['image_id']:06d}.txt"
-    label_path = os.path.join(output_dir, subset, 'labels', label_filename)
-    with open(label_path, 'w') as f:
-        f.write('\n'.join(yolo_labels))
 
 
-def save_dataset_info(output_dir, dataset_info, stats):
-    total_images = sum(len(info) for info in dataset_info.values())
-    print(f"총 생성된 이미지 수: {total_images}")
-
-    for subset, info in dataset_info.items():
-        print(f"{subset.capitalize()} 세트:")
-        print(f"  총 이미지 수: {len(info)}")
-        print(f"  밝은 이미지 수: {sum(1 for item in info if item['bg_mode'] == 'light')}")
-        print(f"  어두운 이미지 수: {sum(1 for item in info if item['bg_mode'] == 'dark')}")
-        print(f"  간격 있는 이미지 수: {sum(1 for item in info if item['has_gap'])}")
-        print(f"  불완전 이미지 수: {sum(1 for item in info if item['is_imperfect'])}")
-        print()
-
-    yaml_content = {
-        'train': os.path.join(output_dir, 'train', 'images'),
-        'val': os.path.join(output_dir, 'val', 'images'),
-        'nc': 5,
-        'names': ['cell', 'merged_cell', 'row', 'column', 'table']
-    }
-    
-    with open(os.path.join(output_dir, 'dataset.yaml'), 'w') as f:
-        yaml.dump(yaml_content, f)
-
-    with open(os.path.join(output_dir, 'dataset_stats.csv'), 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=stats[0].keys())
-        writer.writeheader()
-        writer.writerows(stats)
-
-    summary_stats = calculate_summary_stats(stats)
-    with open(os.path.join(output_dir, 'summary_stats.json'), 'w', encoding='utf-8') as f:
-        json.dump(summary_stats, f, indent=4, ensure_ascii=False)
 if __name__ == "__main__":
     output_dir = 'table_dataset_real'
-    num_images = 10000
+    num_images = 100
     imperfect_ratio = 0.1
     train_ratio = 0.8
     dataset_info = batch_dataset(output_dir, num_images, imperfect_ratio=imperfect_ratio, train_ratio=train_ratio)

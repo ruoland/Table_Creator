@@ -4,7 +4,7 @@ MIN_COLS, MAX_COLS = 3, 10
 MIN_ROWS, MAX_ROWS = 3, 10
 BATCH_SIZE = 1000
 BASE_CELL_WIDTH, BASE_CELL_HEIGHT = 40, 20
-MIN_CELL_SIZE = 40
+MIN_CELL_SIZE = 5
 MIN_IMAGE_WIDTH, MIN_IMAGE_HEIGHT = 300, 500
 MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT = 1200, 1200
 STYLES = ['thin', 'medium', 'thick', 'double']
@@ -115,5 +115,5 @@ EVENTS = ['입학식', '졸업식', '축제', '학술제', '취업박람회', '�
 # 비율 조정을 위한 상수
 MERGED_CELL_RATIO = 0.4  # 병합된 셀의 비율
 SHAPE_GENERATION_RATIO = 0.2  # 도형 생성 비율
-EMPTY_CELL_RATIO = 0.1  # 빈 셀의 비율
-IMPERFECT_RATIO = 0.3  # 불완전한 이미지 비율
+EMPTY_CELL_RATIO = 0.0 # 빈 셀의 비율
+IMPERFECT_RATIO = 0.0  # 불완전한 이미지 비율

@@ -13,3 +13,7 @@ table_dataset_old/
 table_dataset_realx1200/
 table_dataset_real/
 outdated_zip/
+.vscode/
+results/
+yolox_table_dataset_simple/
+yolox_table_dataset_simple.zip

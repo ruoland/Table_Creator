@@ -138,8 +138,6 @@ def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
                     table["rows"].append(row["id"])
                     assigned = True
                     break
-            if not assigned:
-                logger.warning(f"Row {row['id']} could not be assigned to any table")
 
         for column in columns.values():
             assigned = False
@@ -168,7 +166,7 @@ def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
         ]
 
         # 어노테이션 검증 및 조정
-        validate_and_adjust_annotations(coco_data["annotations"], coco_data["images"])
+#        validate_and_adjust_annotations(coco_data["annotations"], coco_data["images"])
 
         # COCO 데이터 저장
         with open(os.path.join(output_dir, f'{subset}_annotations.json'), 'w') as f:
@@ -176,33 +174,6 @@ def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
 
         logger.info(f"Saved COCO annotations for {subset} subset")
 
-def validate_annotations(ann_file, img_dir):
-    with open(ann_file, 'r') as f:
-        ann_data = json.load(f)
-    
-    print(f"Validating annotations in {ann_file}")
-    print(f"Checking images in {img_dir}")
-    
-    for img in ann_data['images']:
-        img_path = os.path.join(img_dir, img['file_name'])
-        if not os.path.exists(img_path):
-            print(f"Warning: Image not found - {img_path}")
-    
-    print("Validation complete.")
-
-def validate_annotations(ann_file, img_dir):
-    with open(ann_file, 'r') as f:
-        ann_data = json.load(f)
-    
-    print(f"Validating annotations in {ann_file}")
-    print(f"Checking images in {img_dir}")
-    
-    for img in ann_data['images']:
-        img_path = os.path.join(img_dir, img['file_name'])
-        if not os.path.exists(img_path):
-            print(f"Warning: Image not found - {img_path}")
-    
-    print("Validation complete.")
 def adjust_bbox(bbox, img_width, img_height):
     x, y, w, h = bbox
     x = max(0, min(x, img_width - 1))

@@ -16,15 +16,14 @@ def calculate_position(cell, position):
     else:  # bottom_right
         return cell[2] - int(cell_width * 0.1), cell[3] - int(cell_height * 0.1)
     
-
-def calculate_text_position(x, y, text_width, text_height, position):
+def calculate_text_position(cell_x, cell_y, cell_width, cell_height, text_width, text_height, position):
     if position == 'center':
-        return (x - text_width // 2, y - text_height // 2)
+        return (cell_x + (cell_width - text_width) // 2, cell_y + (cell_height - text_height) // 2)
     elif position == 'top_left':
-        return (x, y)
+        return (cell_x, cell_y)
     elif position == 'top_right':
-        return (x - text_width, y)
+        return (cell_x + cell_width - text_width, cell_y)
     elif position == 'bottom_left':
-        return (x, y - text_height)
+        return (cell_x, cell_y + cell_height - text_height)
     else:  # bottom_right
-        return (x - text_width, y - text_height)
+        return (cell_x + cell_width - text_width, cell_y + cell_height - text_height)

@@ -7,13 +7,22 @@ import csv, json
 import yaml
 from typing import List, Tuple
 
-from rollback_constant import *
+from dataset_constant import *
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-def get_line_color(bg_color: int) -> int:
-    """배경색에 따라 적절한 선 색상을 반환합니다."""
-    return random.randint(0, 26) if bg_color > 200 else random.randint(230, 256)
+def get_line_color(bg_color):
+    #print(f"Debug: get_line_color input - bg_color = {bg_color}, type = {type(bg_color)}")
+    if isinstance(bg_color, tuple) and len(bg_color) == 3:
+        brightness = sum(bg_color) / 3
+        result = (0, 0, 0) if brightness > 128 else (255, 255, 255)
+    elif isinstance(bg_color, int):
+        result = (0, 0, 0) if bg_color > 128 else (255, 255, 255)
+    else:
+        raise ValueError(f"Invalid background color format: {bg_color}")
+    #print(f"Debug: get_line_color output - result = {result}")
+    return result
+
 
 def random_text(min_length: int = 1, max_length: int = 10) -> str:
     """랜덤한 텍스트를 생성합니다. 40% 확률로 수업 정보, 50% 확률로 자주 사용되는 단어, 10% 확률로 무작위 글자 조합을 반환합니다."""

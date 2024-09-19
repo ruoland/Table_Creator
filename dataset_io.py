@@ -1,15 +1,13 @@
 from opti_calc import *
-from rollback_draw import *
-from rollback_constant import *
-from rollback_utils import *
+from dataset_draw import *
+from dataset_constant import *
+from dataset_utils import *
 import os, csv
 from datetime import datetime
 import yaml
 import itertools
 
 import random, json
-
-
 
 def determine_subset(train_ratio, val_ratio):
     rand = random.random()
@@ -20,38 +18,6 @@ def determine_subset(train_ratio, val_ratio):
     else:
         return 'test'
 
-def save_dataset_info(output_dir, dataset_info, stats):
-    total_images = sum(len(info) for info in dataset_info.values())
-    print(f"총 생성된 이미지 수: {total_images}")
-
-    for subset, info in dataset_info.items():
-        print(f"{subset.capitalize()} 세트:")
-        print(f"  총 이미지 수: {len(info)}")
-        print(f"  밝은 이미지 수: {sum(1 for item in info if item['bg_mode'] == 'light')}")
-        print(f"  어두운 이미지 수: {sum(1 for item in info if item['bg_mode'] == 'dark')}")
-        print(f"  간격 있는 이미지 수: {sum(1 for item in info if item['has_gap'])}")
-        print(f"  불완전 이미지 수: {sum(1 for item in info if item['is_imperfect'])}")
-        print()
-
-    yaml_content = {
-        'train': os.path.join('train', 'images'),
-        'val': os.path.join('val', 'images'),
-        'nc': 5,
-        'names': ['cell', 'merged_cell', 'row', 'column', 'table']
-    }
-    
-    with open(os.path.join(output_dir, 'dataset.yaml'), 'w') as f:
-        yaml.dump(yaml_content, f)
-
-    with open(os.path.join(output_dir, 'dataset_stats.csv'), 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=stats[0].keys())
-        writer.writeheader()
-        writer.writerows(stats)
-
-    summary_stats = calculate_summary_stats(stats)
-    with open(os.path.join(output_dir, 'summary_stats.json'), 'w', encoding='utf-8') as f:
-        json.dump(summary_stats, f, indent=4, ensure_ascii=False)
-        
 def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
     coco_data = {
         "info": {
@@ -189,7 +155,6 @@ def save_image_and_annotations(img, image_stats, output_dir, subset):
     img_filename = f"image_{image_stats['image_id']:06d}.png"
     img_path = os.path.join(output_dir, subset, 'images', img_filename)
     img.save(img_path)
-import gc
 
 def save_last_image_id(output_dir, last_ids):
     with open(os.path.join(output_dir, 'last_image_ids.json'), 'w') as f:

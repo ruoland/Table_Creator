@@ -1,0 +1,429 @@
+Actual files generated - Train: 4000, Validation: 999
+Total images after generation: 4999
+Newly generated images: 0
+         71743757 function calls (58335338 primitive calls) in 469.998 seconds
+
+   Ordered by: standard name
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+       52    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:645(parent)
+       27    0.000    0.000    0.001    0.000 <frozen ntpath>:107(join)
+       65    0.000    0.000    0.000    0.000 <frozen ntpath>:179(splitroot)
+        3    0.000    0.000    0.000    0.000 <frozen ntpath>:236(split)
+        3    0.000    0.000    0.000    0.000 <frozen ntpath>:35(_get_bothseps)
+       14    0.000    0.000    0.000    0.000 <frozen ntpath>:87(isabs)
+        3    0.000    0.000    0.001    0.000 <frozen os>:200(makedirs)
+        1    0.000    0.000  469.998  469.998 <string>:1(<module>)
+       12    2.593    0.216   15.279    1.273 __init__.py:120(dump)
+        1    0.000    0.000    0.000    0.000 __init__.py:274(load)
+        1    0.000    0.000    0.000    0.000 __init__.py:299(loads)
+        2    0.000    0.000    0.000    0.000 __init__.py:49(create_string_buffer)
+        2    0.000    0.000    0.000    0.000 _base.py:144(__init__)
+        2    0.000    0.000    0.000    0.000 _base.py:147(__enter__)
+        2    0.000    0.000    0.000    0.000 _base.py:151(__exit__)
+        2    0.000    0.000    0.000    0.000 _base.py:155(_create_and_install_waiters)
+      102    0.000    0.000    0.001    0.000 _base.py:177(_yield_finished_futures)
+    52/29    0.002    0.000   57.589    1.986 _base.py:199(as_completed)
+        2    0.000    0.000    0.000    0.000 _base.py:223(<genexpr>)
+       50    0.000    0.000    0.002    0.000 _base.py:328(__init__)
+       50    0.000    0.000    0.000    0.000 _base.py:337(_invoke_callbacks)
+       50    0.000    0.000    0.000    0.000 _base.py:398(__get_result)
+       50    0.000    0.000    0.000    0.000 _base.py:428(result)
+       50    0.000    0.000    0.000    0.000 _base.py:497(set_running_or_notify_cancel)
+       50    0.001    0.000    0.003    0.000 _base.py:537(set_result)
+        2    0.000    0.000    0.000    0.000 _base.py:61(__init__)
+        2    0.000    0.000    0.000    0.000 _base.py:643(__enter__)
+        2    0.000    0.000  678.951  339.476 _base.py:646(__exit__)
+       50    0.000    0.000    0.000    0.000 _base.py:65(add_result)
+        2    0.000    0.000    0.000    0.000 _base.py:77(__init__)
+       50    0.001    0.000    0.002    0.000 _base.py:81(add_result)
+       94    0.001    0.000    0.010    0.000 _monitor.py:47(get_instances)
+        2    0.000    0.000    0.000    0.000 _monitor.py:94(report)
+        2    0.000    0.000    0.000    0.000 _weakrefset.py:110(remove)
+       94    0.000    0.000    0.004    0.000 _weakrefset.py:120(update)
+      192    0.000    0.000    0.000    0.000 _weakrefset.py:17(__init__)
+      192    0.000    0.000    0.000    0.000 _weakrefset.py:21(__enter__)
+      192    0.000    0.000    0.001    0.000 _weakrefset.py:27(__exit__)
+       94    0.005    0.000    0.008    0.000 _weakrefset.py:37(__init__)
+       20    0.000    0.000    0.000    0.000 _weakrefset.py:39(_remove)
+      192    0.001    0.000    0.001    0.000 _weakrefset.py:53(_commit_removals)
+      468    0.001    0.000    0.003    0.000 _weakrefset.py:63(__iter__)
+      158    0.000    0.000    0.001    0.000 _weakrefset.py:85(add)
+       94    0.000    0.000    0.009    0.000 _weakrefset.py:95(copy)
+   182/62    0.867    0.005   10.416    0.168 connection.py:1010(_exhaustive_wait)
+   182/58    0.021    0.000   10.420    0.180 connection.py:1032(wait)
+      259    0.000    0.000    0.000    0.000 connection.py:1107(<genexpr>)
+    56/34    0.000    0.000    0.002    0.000 connection.py:1161(reduce_pipe_connection)
+       12    0.000    0.000    0.000    0.000 connection.py:118(__init__)
+       12    0.000    0.000    0.000    0.000 connection.py:131(__del__)
+      668    0.000    0.000    0.000    0.000 connection.py:135(_check_closed)
+      234    0.000    0.000    0.000    0.000 connection.py:139(_check_readable)
+      116    0.000    0.000    0.000    0.000 connection.py:143(_check_writable)
+      112    0.000    0.000    0.000    0.000 connection.py:159(readable)
+      112    0.000    0.000    0.000    0.000 connection.py:164(writable)
+      318    0.000    0.000    0.000    0.000 connection.py:169(fileno)
+       12    0.000    0.000    0.000    0.000 connection.py:174(close)
+  116/110    0.002    0.000    0.646    0.006 connection.py:182(send_bytes)
+       52    0.000    0.000    0.000    0.000 connection.py:208(recv_bytes)
+       50    0.053    0.001    3.285    0.066 connection.py:246(recv)
+  132/128    0.000    0.000    0.104    0.001 connection.py:253(poll)
+       12    0.000    0.000    0.000    0.000 connection.py:277(_close)
+  116/110    0.001    0.000    0.526    0.005 connection.py:284(_send_bytes)
+      102    0.004    0.000    0.067    0.001 connection.py:310(_recv_bytes)
+  132/128    0.004    0.000    0.103    0.001 connection.py:342(_poll)
+       50    0.004    0.000    0.029    0.001 connection.py:348(_get_more_data)
+      6/1    0.000    0.000    0.000    0.000 connection.py:552(Pipe)
+        6    0.000    0.000    0.001    0.000 connection.py:70(arbitrary_address)
+      2/1    0.000    0.000    0.000    0.000 context.py:110(SimpleQueue)
+        8    0.000    0.000    0.000    0.000 context.py:187(get_context)
+        8    0.000    0.000    0.000    0.000 context.py:197(get_start_method)
+        2    0.000    0.000    0.000    0.000 context.py:237(get_context)
+       14    0.000    0.000    0.000    0.000 context.py:253(get_start_method)
+     14/2    0.000    0.000    0.016    0.008 context.py:334(_Popen)
+      182    0.000    0.000    0.000    0.000 context.py:366(get_spawning_popen)
+       28    0.000    0.000    0.000    0.000 context.py:369(set_spawning_popen)
+       70    0.000    0.000    0.000    0.000 context.py:372(assert_spawning)
+        1    0.000    0.000    0.000    0.000 context.py:41(cpu_count)
+      2/1    0.000    0.000    0.000    0.000 context.py:60(Pipe)
+        4    0.000    0.000    0.000    0.000 context.py:65(Lock)
+        2    0.000    0.000    0.000    0.000 context.py:85(BoundedSemaphore)
+        1    0.001    0.001  469.967  469.967 dataset_creator.py:220(batch_dataset)
+      2/1    0.000    0.000  456.512  456.512 dataset_creator.py:242(process_subset)
+      905    0.006    0.000    0.015    0.000 dataset_creator.py:272(<genexpr>)
+        3    0.000    0.000    0.002    0.001 dataset_creator.py:305(save_checkpoint)
+        1    0.000    0.000    0.000    0.000 dataset_creator.py:313(load_checkpoint)
+        1    0.016    0.016  469.994  469.994 dataset_creator.py:331(main)
+        1    0.000    0.000    0.000    0.000 dataset_io.py:34(__init__)
+        1    0.000    0.000    0.000    0.000 dataset_io.py:50(save_last_image_id)
+        4    0.000    0.000   10.181    2.545 dataset_io.py:62(save_subset_results)
+        2    0.003    0.001    0.013    0.007 dataset_utils.py:66(count_existing_images)
+        1    0.000    0.000    0.000    0.000 decoder.py:332(decode)
+        1    0.000    0.000    0.000    0.000 decoder.py:343(raw_decode)
+        4    0.000    0.000    0.000    0.000 encoder.py:105(__init__)
+       12    0.000    0.000    0.000    0.000 encoder.py:205(iterencode)
+    23997    0.039    0.000    0.039    0.000 encoder.py:224(floatstr)
+       12    0.000    0.000    0.000    0.000 encoder.py:260(_make_iterencode)
+13866374/11048010    4.894    0.000   12.637    0.000 encoder.py:278(_iterencode_list)
+21184154/11048066    7.629    0.000   14.506    0.000 encoder.py:334(_iterencode_dict)
+ 11048078    2.806    0.000   17.936    0.000 encoder.py:414(_iterencode)
+        2    0.000    0.000    0.000    0.000 functools.py:391(__get__)
+      121    0.000    0.000    0.717    0.006 popen_spawn_win32.py:103(wait)
+      107    0.000    0.000    0.001    0.000 popen_spawn_win32.py:121(poll)
+       14    0.000    0.000    0.000    0.000 popen_spawn_win32.py:29(_close_handles)
+     14/2    0.000    0.000    0.016    0.008 popen_spawn_win32.py:45(__init__)
+       70    0.000    0.000    0.000    0.000 popen_spawn_win32.py:70(<genexpr>)
+       42    0.000    0.000    0.000    0.000 popen_spawn_win32.py:99(duplicate_for_child)
+     14/2    0.000    0.000    0.016    0.008 process.py:110(start)
+       14    0.000    0.000    0.716    0.051 process.py:142(join)
+       50    0.000    0.000    0.000    0.000 process.py:147(__init__)
+       28    0.000    0.000    0.000    0.000 process.py:153(is_alive)
+       50    0.000    0.000    0.000    0.000 process.py:161(__init__)
+      2/1    0.000    0.000    0.000    0.000 process.py:170(__init__)
+       14    0.000    0.000    0.000    0.000 process.py:189(name)
+       14    0.000    0.000    0.000    0.000 process.py:213(authkey)
+       14    0.000    0.000    0.000    0.000 process.py:234(ident)
+      506    0.000    0.000    0.001    0.000 process.py:247(sentinel)
+        2    0.000    0.000    0.000    0.000 process.py:293(__init__)
+      2/1    0.000    0.000  456.512  456.512 process.py:340(run)
+       28    0.000    0.000    0.000    0.000 process.py:350(__reduce__)
+       34    0.000    0.000    0.000    0.000 process.py:37(current_process)
+    82/81    0.001    0.000    0.003    0.000 process.py:392(add_call_item_to_queue)
+    80/28    0.022    0.000  450.041   16.073 process.py:415(wait_result_broken_or_wakeup)
+       50    0.000    0.000    0.004    0.000 process.py:450(process_result_item)
+       80    0.000    0.000    0.000    0.000 process.py:473(is_shutting_down)
+        2    0.000    0.000    0.000    0.000 process.py:534(flag_executor_shutting_down)
+        2    0.000    0.000    0.000    0.000 process.py:560(shutdown_workers)
+        2    0.000    0.000  678.949  339.474 process.py:574(join_executor_internals)
+        2    0.000    0.000  678.949  339.474 process.py:578(_join_executor_internals)
+        4    0.000    0.000    0.000    0.000 process.py:595(get_n_children_alive)
+       32    0.000    0.000    0.000    0.000 process.py:597(<genexpr>)
+        2    0.000    0.000    0.000    0.000 process.py:604(_check_system_limits)
+       14    0.000    0.000    0.001    0.000 process.py:61(_cleanup)
+      2/1    0.000    0.000    0.000    0.000 process.py:656(__init__)
+      2/1    0.000    0.000    0.001    0.001 process.py:69(__init__)
+        2    0.000    0.000    0.000    0.000 process.py:73(close)
+    50/49    0.000    0.000    0.000    0.000 process.py:766(_start_executor_manager_thread)
+    50/35    0.000    0.000    0.030    0.001 process.py:776(_adjust_process_count)
+     14/2    0.000    0.000    0.016    0.008 process.py:799(_spawn_process)
+       14    0.000    0.000    0.000    0.000 process.py:80(__init__)
+    50/34    0.001    0.000    0.135    0.004 process.py:810(submit)
+       52    0.001    0.000    0.004    0.000 process.py:84(wakeup)
+        2    0.000    0.000  678.951  339.476 process.py:864(shutdown)
+    80/79    0.000    0.000    0.192    0.002 process.py:88(clear)
+       28    0.000    0.000    0.000    0.000 process.py:94(<genexpr>)
+      576    0.000    0.000    0.000    0.000 process.py:99(_check_closed)
+      100    0.001    0.000    0.002    0.000 queue.py:122(put)
+  542/461    0.028    0.000  846.073    1.835 queue.py:154(get)
+        3    0.000    0.000    0.000    0.000 queue.py:206(_init)
+      984    0.002    0.000    0.004    0.000 queue.py:209(_qsize)
+      100    0.000    0.000    0.000    0.000 queue.py:213(_put)
+      100    0.000    0.000    0.000    0.000 queue.py:217(_get)
+        3    0.000    0.000    0.000    0.000 queue.py:34(__init__)
+        1    0.000    0.000    0.000    0.000 queue.py:97(empty)
+      132    0.000    0.000    0.000    0.000 queues.py:131(full)
+       14    0.000    0.000    0.000    0.000 queues.py:137(put_nowait)
+        2    0.000    0.000    0.000    0.000 queues.py:140(close)
+        2    0.000    0.000  678.106  339.053 queues.py:147(join_thread)
+      2/1    0.000    0.000    0.000    0.000 queues.py:175(_start_thread)
+        2    0.000    0.000   39.232   19.616 queues.py:214(_finalize_join)
+        2    0.000    0.000    0.000    0.000 queues.py:224(_finalize_close)
+      2/1    0.000    0.000    0.000    0.000 queues.py:231(_feed)
+      2/1    0.000    0.000    0.000    0.000 queues.py:361(__init__)
+      2/1    0.000    0.000    0.000    0.000 queues.py:37(__init__)
+        2    0.000    0.000    0.000    0.000 queues.py:370(close)
+       14    0.000    0.000    0.000    0.000 queues.py:377(__getstate__)
+       14    0.000    0.000    0.000    0.000 queues.py:57(__getstate__)
+        2    0.000    0.000    0.000    0.000 queues.py:71(_reset)
+    64/61    0.000    0.000    0.001    0.000 queues.py:86(put)
+       12    0.000    0.000    0.000    0.000 random.py:454(choices)
+    56/34    0.000    0.000    0.002    0.000 reduction.py:106(__init__)
+       92    0.001    0.000    0.002    0.000 reduction.py:38(__init__)
+       64    0.000    0.000    0.004    0.000 reduction.py:48(dumps)
+    28/18    0.000    0.000    0.005    0.000 reduction.py:58(dump)
+       42    0.000    0.000    0.000    0.000 reduction.py:71(duplicate)
+       14    0.000    0.000    0.000    0.000 spawn.py:138(_check_not_importing_main)
+       14    0.000    0.000    0.000    0.000 spawn.py:160(get_preparation_data)
+       28    0.000    0.000    0.000    0.000 spawn.py:45(get_executable)
+       14    0.000    0.000    0.000    0.000 spawn.py:83(get_command_line)
+       42    0.000    0.000    0.000    0.000 spawn.py:92(<genexpr>)
+      107    0.001    0.000    0.001    0.000 std.py:102(acquire)
+      107    0.002    0.000    0.003    0.000 std.py:106(release)
+       55    0.000    0.000    0.001    0.000 std.py:110(__enter__)
+       55    0.000    0.000    0.002    0.000 std.py:113(__exit__)
+        2    0.000    0.000    0.000    0.000 std.py:1147(__del__)
+       54    0.001    0.000    0.024    0.000 std.py:1150(__str__)
+        4    0.000    0.000    0.000    0.000 std.py:1153(_comparable)
+      140    0.000    0.000    0.000    0.000 std.py:1157(__hash__)
+    52/28    0.002    0.000  816.509   29.161 std.py:1160(__iter__)
+    50/49    0.012    0.000  226.778    4.628 std.py:1198(update)
+        4    0.000    0.000    0.007    0.002 std.py:1265(close)
+        4    0.000    0.000    0.000    0.000 std.py:1286(fp_write)
+        2    0.000    0.000    0.000    0.000 std.py:1301(<lambda>)
+    52/51    0.044    0.001   14.482    0.284 std.py:1325(refresh)
+       82    0.002    0.000    7.537    0.092 std.py:1441(moveto)
+       54    0.001    0.000    0.002    0.000 std.py:1446(format_dict)
+       54    0.065    0.001    4.319    0.080 std.py:1464(display)
+       54    0.000    0.000    0.000    0.000 std.py:153(__init__)
+       54    0.000    0.000    0.000    0.000 std.py:163(colour)
+       54    0.000    0.000    0.000    0.000 std.py:167(colour)
+       54    0.000    0.000    0.000    0.000 std.py:186(__format__)
+        6    0.000    0.000    0.000    0.000 std.py:226(__init__)
+      294    0.001    0.000    0.001    0.000 std.py:231(__call__)
+      106    0.002    0.000    0.002    0.000 std.py:400(format_interval)
+        2    0.000    0.000    0.000    0.000 std.py:438(status_printer)
+       54    0.001    0.000    3.017    0.056 std.py:451(fp_write)
+       54    0.030    0.001    3.069    0.057 std.py:457(print_status)
+       54    0.004    0.000    0.021    0.000 std.py:464(format_meter)
+        2    0.000    0.000    0.000    0.000 std.py:663(__new__)
+        2    0.000    0.000    0.000    0.000 std.py:679(_get_free_pos)
+        2    0.000    0.000    0.000    0.000 std.py:686(_decr_instances)
+        1    0.000    0.000    0.000    0.000 std.py:708(<lambda>)
+       49    0.000    0.000    0.000    0.000 std.py:760(get_lock)
+        2    0.000    0.000    0.002    0.001 std.py:952(__init__)
+       14    0.000    0.000    0.000    0.000 subprocess.py:290(_optim_args_from_interpreter_flags)
+       14    0.000    0.000    0.000    0.000 subprocess.py:300(_args_from_interpreter_flags)
+       42    0.000    0.000    0.001    0.000 synchronize.py:100(__getstate__)
+        6    0.000    0.000    0.000    0.000 synchronize.py:121(_make_name)
+        2    0.000    0.000    0.000    0.000 synchronize.py:151(__init__)
+        4    0.000    0.000    0.000    0.000 synchronize.py:168(__init__)
+        6    0.000    0.000    0.000    0.000 synchronize.py:50(__init__)
+        6    0.000    0.000    0.000    0.000 synchronize.py:90(_make_methods)
+       12    0.000    0.000    0.000    0.000 tempfile.py:142(rng)
+       12    0.000    0.000    0.000    0.000 tempfile.py:153(__next__)
+        6    0.000    0.000    0.000    0.000 tempfile.py:229(_get_candidate_names)
+        6    0.000    0.000    0.001    0.000 tempfile.py:400(mktemp)
+        6    0.000    0.000    0.000    0.000 tempfile.py:76(_exists)
+      4/1    0.002    0.001  456.514  456.514 threading.py:1001(run)
+      6/1    0.000    0.000  456.515  456.515 threading.py:1018(_bootstrap)
+        6    0.000    0.000    0.000    0.000 threading.py:1038(_set_ident)
+        6    0.000    0.000    0.000    0.000 threading.py:1042(_set_native_id)
+        6    0.000    0.000    0.000    0.000 threading.py:1045(_set_tstate_lock)
+      6/1    0.000    0.000  456.514  456.514 threading.py:1058(_bootstrap_inner)
+        6    0.000    0.000    0.000    0.000 threading.py:1081(_stop)
+        6    0.000    0.000    0.000    0.000 threading.py:1108(_delete)
+      6/4    0.000    0.000  678.951  169.738 threading.py:1117(join)
+  459/457    0.001    0.000  678.956    1.486 threading.py:1155(_wait_for_tstate_lock)
+      453    0.004    0.000    0.009    0.000 threading.py:1222(is_alive)
+       16    0.000    0.000    0.000    0.000 threading.py:1236(daemon)
+       50    0.000    0.000    0.000    0.000 threading.py:124(RLock)
+        6    0.000    0.000    0.000    0.000 threading.py:1356(_make_invoke_excepthook)
+       10    0.000    0.000    0.000    0.000 threading.py:1485(current_thread)
+       71    0.002    0.000    0.002    0.000 threading.py:277(__init__)
+1217/1212    0.001    0.000    0.002    0.000 threading.py:299(__enter__)
+     1217    0.003    0.000    0.003    0.000 threading.py:302(__exit__)
+      580    0.000    0.000    0.001    0.000 threading.py:308(_release_save)
+      580    0.001    0.000    0.003    0.000 threading.py:311(_acquire_restore)
+      952    0.003    0.000    0.004    0.000 threading.py:314(_is_owned)
+    580/5    1.391    0.002  457.411   91.482 threading.py:323(wait)
+      422    0.001    0.000    0.002    0.000 threading.py:394(notify)
+      106    0.000    0.000    0.001    0.000 threading.py:424(notify_all)
+        2    0.000    0.000    0.000    0.000 threading.py:457(__init__)
+       50    0.000    0.000    0.000    0.000 threading.py:468(acquire)
+       50    0.000    0.000    0.000    0.000 threading.py:515(release)
+        8    0.000    0.000    0.000    0.000 threading.py:588(__init__)
+      582    0.000    0.000    0.000    0.000 threading.py:601(is_set)
+       56    0.000    0.000    0.002    0.000 threading.py:616(set)
+       50    0.000    0.000    0.000    0.000 threading.py:627(clear)
+   103/55    0.008    0.000  235.174    4.276 threading.py:637(wait)
+        4    0.000    0.000    0.000    0.000 threading.py:839(_newname)
+        8    0.000    0.000    0.000    0.000 threading.py:857(_maintain_shutdown_locks)
+        6    0.000    0.000    0.000    0.000 threading.py:884(__init__)
+      6/3    0.000    0.000    0.000    0.000 threading.py:975(start)
+       18    0.000    0.000    0.000    0.000 util.py:189(__init__)
+       18    0.000    0.000  456.287   25.349 util.py:208(__call__)
+       18    0.000    0.000    0.000    0.000 util.py:44(sub_debug)
+       24    0.000    0.000    0.000    0.000 util.py:48(debug)
+       54    0.000    0.000    0.000    0.000 utils.py:108(__init__)
+       54    0.000    0.000    0.000    0.000 utils.py:112(__format__)
+        2    0.000    0.000    0.000    0.000 utils.py:125(__eq__)
+        2    0.000    0.000    0.000    0.000 utils.py:139(__getattr__)
+        6    0.000    0.000    0.000    0.000 utils.py:152(wrapper_setattr)
+        2    0.000    0.000    0.000    0.000 utils.py:156(__init__)
+        4    0.000    0.000    0.000    0.000 utils.py:187(disable_on_exception)
+      276    0.246    0.001    9.571    0.035 utils.py:194(inner)
+        2    0.000    0.000    0.000    0.000 utils.py:213(__init__)
+        8    0.000    0.000    0.000    0.000 utils.py:222(__eq__)
+        2    0.000    0.000    0.000    0.000 utils.py:252(_is_utf)
+        2    0.000    0.000    0.000    0.000 utils.py:266(_supports_unicode)
+      108    0.000    0.000    0.001    0.000 utils.py:273(_is_ascii)
+        2    0.000    0.000    0.000    0.000 utils.py:282(_screen_shape_wrapper)
+        2    0.000    0.000    0.000    0.000 utils.py:297(_screen_shape_windows)
+       82    0.000    0.000    0.000    0.000 utils.py:370(_term_move_up)
+      162    0.000    0.000    0.014    0.000 utils.py:374(_text_width)
+    24676    0.006    0.000    0.009    0.000 utils.py:375(<genexpr>)
+      162    0.000    0.000    0.014    0.000 utils.py:378(disp_len)
+       54    0.000    0.000    0.005    0.000 utils.py:386(disp_trim)
+        2    0.000    0.000    0.000    0.000 weakref.py:369(remove)
+        2    0.000    0.000    0.000    0.000 weakref.py:427(__setitem__)
+        2    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0x00007FFC0C398790}
+       27    0.014    0.001    0.014    0.001 {built-in method _io.open}
+  2573286    0.651    0.000    0.651    0.000 {built-in method _json.encode_basestring_ascii}
+       50    0.185    0.004    0.185    0.004 {built-in method _pickle.loads}
+        2    0.000    0.000    0.000    0.000 {built-in method _struct.unpack}
+        6    0.000    0.000    0.000    0.000 {built-in method _thread._set_sentinel}
+      599    0.006    0.000    0.006    0.000 {built-in method _thread.allocate_lock}
+        2    0.000    0.000    0.000    0.000 {built-in method _thread.daemon_threads_allowed}
+       22    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+        6    0.000    0.000    0.000    0.000 {built-in method _thread.get_native_id}
+        6    0.000    0.000    0.000    0.000 {built-in method _thread.start_new_thread}
+        4    0.000    0.000    0.000    0.000 {built-in method _weakref.proxy}
+  110/104    0.000    0.000    0.000    0.000 {built-in method _winapi.CloseHandle}
+        6    0.000    0.000    0.000    0.000 {built-in method _winapi.ConnectNamedPipe}
+      6/4    0.000    0.000    0.000    0.000 {built-in method _winapi.CreateFile}
+      6/5    0.000    0.000    0.000    0.000 {built-in method _winapi.CreateNamedPipe}
+       14    0.000    0.000    0.000    0.000 {built-in method _winapi.CreatePipe}
+     14/6    0.099    0.007    0.015    0.003 {built-in method _winapi.CreateProcess}
+    98/88    0.000    0.000    0.000    0.000 {built-in method _winapi.DuplicateHandle}
+       98    0.000    0.000    0.000    0.000 {built-in method _winapi.GetCurrentProcess}
+       14    0.000    0.000    0.000    0.000 {built-in method _winapi.GetExitCodeProcess}
+    56/43    0.001    0.000    0.001    0.000 {built-in method _winapi.OpenProcess}
+  152/151    0.003    0.000    0.003    0.000 {built-in method _winapi.PeekNamedPipe}
+  362/361    0.015    0.000    1.313    0.004 {built-in method _winapi.ReadFile}
+        6    0.000    0.000    0.000    0.000 {built-in method _winapi.SetNamedPipeHandleState}
+   237/88   17.782    0.075   10.415    0.118 {built-in method _winapi.WaitForMultipleObjects}
+      121    0.716    0.006    0.716    0.006 {built-in method _winapi.WaitForSingleObject}
+  116/110    0.002    0.000    0.156    0.001 {built-in method _winapi.WriteFile}
+       59    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+      452    0.001    0.000    0.015    0.000 {built-in method builtins.any}
+      266    0.000    0.000    0.000    0.000 {built-in method builtins.divmod}
+      2/1    0.000    0.000  469.998  469.998 {built-in method builtins.exec}
+     1222    0.002    0.000    0.002    0.000 {built-in method builtins.getattr}
+      570    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+   609487    0.117    0.000    0.117    0.000 {built-in method builtins.id}
+ 10945874    1.578    0.000    1.578    0.000 {built-in method builtins.isinstance}
+     1526    0.001    0.000    0.001    0.000 {built-in method builtins.len}
+      215    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+       52    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+       50    0.000    0.000    0.000    0.000 {built-in method builtins.next}
+     1134    0.000    0.000    0.000    0.000 {built-in method builtins.ord}
+        6    0.002    0.000    0.002    0.000 {built-in method builtins.print}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.sorted}
+      166    0.004    0.000    0.013    0.000 {built-in method builtins.sum}
+        2    0.000    0.000    0.000    0.000 {built-in method fromtimestamp}
+       50    7.957    0.159    7.957    0.159 {built-in method gc.collect}
+       96    0.000    0.000    0.000    0.000 {built-in method math.floor}
+       14    0.000    0.000    0.000    0.000 {built-in method msvcrt.open_osfhandle}
+       52    0.000    0.000    0.000    0.000 {built-in method now}
+        7    0.001    0.000    0.001    0.000 {built-in method nt._path_exists}
+        3    0.000    0.000    0.000    0.000 {built-in method nt._path_isdir}
+       14    0.000    0.000    0.000    0.000 {built-in method nt._path_normpath}
+        1    0.000    0.000    0.000    0.000 {built-in method nt.cpu_count}
+      109    0.000    0.000    0.000    0.000 {built-in method nt.fspath}
+       14    0.000    0.000    0.000    0.000 {built-in method nt.getcwd}
+      196    0.000    0.000    0.000    0.000 {built-in method nt.getpid}
+        6    0.009    0.001    0.009    0.001 {built-in method nt.listdir}
+        6    0.000    0.000    0.000    0.000 {built-in method nt.lstat}
+        3    0.000    0.000    0.000    0.000 {built-in method nt.mkdir}
+        2    0.000    0.000    0.000    0.000 {built-in method sys.audit}
+       25    0.000    0.000    0.000    0.000 {built-in method sys.getwindowsversion}
+     1293    0.002    0.000    0.002    0.000 {built-in method time.monotonic}
+      251    0.000    0.000    0.000    0.000 {built-in method time.time}
+    24514    0.003    0.000    0.003    0.000 {built-in method unicodedata.east_asian_width}
+  484/478    0.002    0.000    0.002    0.000 {method 'GetOverlappedResult' of '_winapi.Overlapped' objects}
+      200    0.000    0.000    0.000    0.000 {method '__enter__' of '_thread.RLock' objects}
+1017/1013    0.001    0.000    0.001    0.000 {method '__enter__' of '_thread.lock' objects}
+    27/26    0.004    0.000    0.004    0.000 {method '__exit__' of '_io._IOBase' objects}
+      218    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.RLock' objects}
+     1180    0.001    0.000    0.001    0.000 {method '__exit__' of '_thread.lock' objects}
+       50    0.000    0.000    0.000    0.000 {method '_is_owned' of '_thread.RLock' objects}
+      132    0.000    0.000    0.000    0.000 {method '_is_zero' of '_multiprocessing.SemLock' objects}
+      171    0.000    0.000    0.000    0.000 {method 'acquire' of '_multiprocessing.SemLock' objects}
+      157    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.RLock' objects}
+  3194/15  411.500    0.129    0.000    0.000 {method 'acquire' of '_thread.lock' objects}
+      470    0.001    0.000    0.001    0.000 {method 'add' of 'set' objects}
+      746    0.001    0.000    0.001    0.000 {method 'append' of 'collections.deque' objects}
+      466    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+  237/236    0.003    0.000    0.003    0.000 {method 'cancel' of '_winapi.Overlapped' objects}
+        2    0.000    0.000    0.000    0.000 {method 'clear' of 'collections.deque' objects}
+      106    0.000    0.000    0.000    0.000 {method 'copy' of 'dict' objects}
+       14    0.000    0.000    0.000    0.000 {method 'copy' of 'list' objects}
+        2    0.000    0.000    0.000    0.000 {method 'difference' of 'set' objects}
+        8    0.000    0.000    0.000    0.000 {method 'difference_update' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+       34    0.000    0.000    0.000    0.000 {method 'discard' of 'set' objects}
+    92/79    0.003    0.000    0.005    0.000 {method 'dump' of '_pickle.Pickler' objects}
+        2    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+    14997    0.004    0.000    0.004    0.000 {method 'endswith' of 'str' objects}
+      100    0.005    0.000    0.005    0.000 {method 'extend' of 'list' objects}
+       12    0.000    0.000    0.000    0.000 {method 'find' of 'str' objects}
+      140    0.902    0.006    0.902    0.006 {method 'flush' of '_io.TextIOWrapper' objects}
+      108    0.004    0.000    0.004    0.000 {method 'format' of 'str' objects}
+       14    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+      114    0.000    0.000    0.000    0.000 {method 'getbuffer' of '_io.BytesIO' objects}
+      100    0.000    0.000    0.000    0.000 {method 'getbuffer' of '_winapi.Overlapped' objects}
+       52    0.000    0.000    0.000    0.000 {method 'getvalue' of '_io.BytesIO' objects}
+       14    0.000    0.000    0.000    0.000 {method 'index' of 'list' objects}
+   334302    0.077    0.000    0.077    0.000 {method 'items' of 'dict' objects}
+       54    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+      182    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+       28    0.000    0.000    0.000    0.000 {method 'locked' of '_thread.lock' objects}
+        2    0.000    0.000    0.000    0.000 {method 'match' of 're.Pattern' objects}
+       50    0.000    0.000    0.000    0.000 {method 'pop' of 'dict' objects}
+      242    0.000    0.000    0.000    0.000 {method 'pop' of 'list' objects}
+      204    0.000    0.000    0.000    0.000 {method 'popleft' of 'collections.deque' objects}
+       96    0.000    0.000    0.000    0.000 {method 'random' of '_random.Random' objects}
+        1    0.000    0.000    0.000    0.000 {method 'read' of '_io.TextIOWrapper' objects}
+      107    0.000    0.000    0.000    0.000 {method 'release' of '_multiprocessing.SemLock' objects}
+      157    0.000    0.000    0.000    0.000 {method 'release' of '_thread.RLock' objects}
+      758    0.001    0.000    0.001    0.000 {method 'release' of '_thread.lock' objects}
+      580    0.002    0.000    0.002    0.000 {method 'remove' of 'collections.deque' objects}
+       50    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
+      294    0.000    0.000    0.000    0.000 {method 'remove' of 'set' objects}
+       79    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+       50    0.000    0.000    0.000    0.000 {method 'reverse' of 'list' objects}
+       52    0.000    0.000    0.000    0.000 {method 'rpartition' of 'str' objects}
+        3    0.000    0.000    0.000    0.000 {method 'rstrip' of 'str' objects}
+       29    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+      162    0.000    0.000    0.000    0.000 {method 'sub' of 're.Pattern' objects}
+      160    0.000    0.000    0.000    0.000 {method 'update' of 'dict' objects}
+      182    0.001    0.000    0.001    0.000 {method 'update' of 'set' objects}
+        6    0.000    0.000    0.000    0.000 {method 'upper' of 'str' objects}
+       86    0.000    0.000    0.000    0.000 {method 'values' of 'dict' objects}
+      100    0.004    0.000    0.004    0.000 {method 'write' of '_io.BytesIO' objects}
+11048206/10598890    7.456    0.000   12.030    0.000 {method 'write' of '_io.TextIOWrapper' objects}
+
+
+
+D:\Projects\OCR-LEARNIGN-PROJECT\OCR-PROJECT_OLD>

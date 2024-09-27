@@ -1,202 +1,90 @@
-from opti_calc import *
 from dataset_draw import *
 from dataset_constant import *
 from dataset_utils import *
-import os, csv
-from datetime import datetime
-import yaml
-import itertools
+import os
+import ujson as json
 
-import random, json
 
-def determine_subset(train_ratio, val_ratio):
-    rand = random.random()
-    if rand < train_ratio:
-        return 'train'
-    elif rand < train_ratio + val_ratio:
-        return 'val'
-    else:
-        return 'test'
+class ImageIdManager:
+    def __init__(self, output_dir):
+        self.output_dir = output_dir
+        self.id_file = os.path.join(output_dir, 'last_image_id.json')
 
-def save_coco_annotations(output_dir, dataset_info, coco_annotations, subset):
-    coco_data = {
-        "info": {
-            "description": f"Table Detection Dataset - {subset}",
-            "url": "",
-            "version": "1.0",
-            "year": datetime.now().year,
-            "contributor": "",
-            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        },
-        "licenses": [
-            {
-                "url": "",
-                "id": 1,
-                "name": "Unknown"
-            }
-        ],
-        "images": [],
-        "annotations": [],
+    def get_last_image_id(self):
+        last_id = 0
+        for subset in ['train', 'val']:
+            image_dir = os.path.join(self.output_dir, subset, 'images')
+            if os.path.exists(image_dir):
+                image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
+                if image_files:
+                    ids = [int(f.split('.')[0]) for f in image_files]
+                    if ids:
+                        last_id = max(last_id, max(ids))
+        return last_id
+
+    def save_last_image_id(self, last_id):
+        with open(self.id_file, 'w') as f:
+            json.dump({'last_image_id': last_id}, f)
+
+    def load_last_image_id(self):
+        try:
+            with open(self.id_file, 'r') as f:
+                data = json.load(f)
+                return data['last_image_id']
+        except FileNotFoundError:
+            return 0
+import json
+import numpy as np
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
+
+def save_subset_results(output_dir, subset, dataset_info, coco_annotations):
+    # COCO 형식 주석 저장
+    images = [{"id": int(info['image_id']), 
+               "file_name": f"{int(info['image_id']):06d}.png", 
+               "width": int(info['image_width']), 
+               "height": int(info['image_height'])} 
+              for info in dataset_info]
+    
+    # 모든 부동소수점 값을 Python float로 변환
+    def convert_floats(item):
+        if isinstance(item, dict):
+            return {k: convert_floats(v) for k, v in item.items()}
+        elif isinstance(item, list):
+            return [convert_floats(v) for v in item]
+        elif isinstance(item, (np.integer, np.floating)):
+            return float(item)
+        return item
+
+    coco_annotations = convert_floats(coco_annotations)
+    
+    coco_format = {
+        "images": images,
+        "annotations": coco_annotations,
         "categories": [
-            {"id": 1, "name": "cell", "supercategory": "table"},
-            {"id": 2, "name": "merged_cell", "supercategory": "table"},
-            {"id": 3, "name": "row", "supercategory": "table"},
-            {"id": 4, "name": "column", "supercategory": "table"},
-            {"id": 5, "name": "table", "supercategory": "table"}
+            {"id": 0, "name": "cell"},
+            {"id": 1, "name": "table"}
         ]
     }
+    
+    annotation_file = os.path.join(output_dir, f'{subset}_annotations.json')
+    
+    with open(annotation_file, 'w') as f:
+        json.dump(coco_format, f, cls=NumpyEncoder)
+    logger.info(f"Saved annotations for {subset} to {annotation_file}")
 
-    image_ids = set()
-    for image_info in dataset_info[subset]:
-        # 이미지 경로를 'train/images/' 또는 'val/images/'로 설정
-        coco_data["images"].append({
-            "id": image_info['image_id'],
-            "width": image_info['image_width'],
-            "height": image_info['image_height'],
-            "file_name": os.path.join(subset, "images", f"image_{image_info['image_id']:06d}.png"),  # 수정된 경로
-            "license": 1,
-            "flickr_url": "",
-            "coco_url": "",
-            "date_captured": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        })
-        image_ids.add(image_info['image_id'])
-
-    # 계층 구조를 위한 임시 저장소
-    tables = {}
-    rows = {}
-    columns = {}
-
-    for ann in coco_annotations:
-        if ann["image_id"] in image_ids:
-            if ann["category_id"] == 5:  # Table
-                tables[ann["id"]] = ann
-                ann["rows"] = []
-                ann["columns"] = []
-            elif ann["category_id"] == 3:  # Row
-                rows[ann["id"]] = ann
-                ann["cells"] = []
-            elif ann["category_id"] == 4:  # Column
-                columns[ann["id"]] = ann
-                ann["cells"] = []
-            elif ann["category_id"] in [1, 2]:  # Cell or Merged Cell
-                if "row_id" in ann:
-                    if ann["row_id"] not in rows:
-                        logger.warning(f"Row ID {ann['row_id']} not found for cell {ann['id']}")
-                        rows[ann["row_id"]] = {"cells": []}
-                    rows[ann["row_id"]]["cells"].append(ann["id"])
-                if "column_id" in ann:
-                    if ann["column_id"] not in columns:
-                        logger.warning(f"Column ID {ann['column_id']} not found for cell {ann['id']}")
-                        columns[ann["column_id"]] = {"cells": []}
-                    columns[ann["column_id"]]["cells"].append(ann["id"])
-        # 두 번째 패스: 테이블에 행과 열 연결
-        for table in tables.values():
-            table["rows"] = []
-            table["columns"] = []
-
-        for row in rows.values():
-            assigned = False
-            for table in tables.values():
-                if (row["bbox"][0] >= table["bbox"][0] and 
-                    row["bbox"][1] >= table["bbox"][1] and
-                    row["bbox"][0] + row["bbox"][2] <= table["bbox"][0] + table["bbox"][2] and
-                    row["bbox"][1] + row["bbox"][3] <= table["bbox"][1] + table["bbox"][3]):
-                    table["rows"].append(row["id"])
-                    assigned = True
-                    break
-
-        for column in columns.values():
-            assigned = False
-            for table in tables.values():
-                if (column["bbox"][0] >= table["bbox"][0] and 
-                    column["bbox"][1] >= table["bbox"][1] and
-                    column["bbox"][0] + column["bbox"][2] <= table["bbox"][0] + table["bbox"][2] and
-                    column["bbox"][1] + column["bbox"][3] <= table["bbox"][1] + table["bbox"][3]):
-                    table["columns"].append(column["id"])
-                    assigned = True
-                    break
-            if not assigned:
-                logger.warning(f"Column {column['id']} could not be assigned to any table")
-
-        # 테이블, 행, 열의 일관성 검사
-        for table in tables.values():
-            if not table["rows"]:
-                logger.warning(f"Table {table['id']} has no rows")
-            if not table["columns"]:
-                logger.warning(f"Table {table['id']} has no columns")
-
-        # 최종 어노테이션 리스트 생성
-        coco_data["annotations"] = list(tables.values()) + list(rows.values()) + list(columns.values()) + [
-            ann for ann in coco_annotations 
-            if ann["image_id"] in image_ids and ann["category_id"] in [1, 2]
-        ]
-
-        # 어노테이션 검증 및 조정
-#        validate_and_adjust_annotations(coco_data["annotations"], coco_data["images"])
-
-        # COCO 데이터 저장
-        with open(os.path.join(output_dir, f'{subset}_annotations.json'), 'w') as f:
-            json.dump(coco_data, f, indent=4)  # 가독성을 위해 indent 추가
-
-        logger.info(f"Saved COCO annotations for {subset} subset")
-
-def adjust_bbox(bbox, img_width, img_height):
-    x, y, w, h = bbox
-    x = max(0, min(x, img_width - 1))
-    y = max(0, min(y, img_height - 1))
-    w = min(w, img_width - x)
-    h = min(h, img_height - y)
-    return [x, y, w, h]
-def validate_and_adjust_annotations(annotations, images):
-    for ann in annotations:
-        img_info = next(img for img in images if img['id'] == ann['image_id'])
-        ann['bbox'] = adjust_bbox(ann['bbox'], img_info['width'], img_info['height'])
-def save_image_and_annotations(img, image_stats, output_dir, subset):
-    img_filename = f"image_{image_stats['image_id']:06d}.png"
-    img_path = os.path.join(output_dir, subset, 'images', img_filename)
-    img.save(img_path)
-
-def save_last_image_id(output_dir, last_ids):
-    with open(os.path.join(output_dir, 'last_image_ids.json'), 'w') as f:
-        json.dump(last_ids, f)
-
-def load_last_image_ids(output_dir):
-    try:
-        with open(os.path.join(output_dir, 'last_image_ids.json'), 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {'train': 0, 'val': 0}
-def get_last_image_id(output_dir, subset):
-    last_id = 0
-    image_dir = os.path.join(output_dir, subset, 'images')
-    if os.path.exists(image_dir):
-        image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
-        if image_files:
-            last_file = max(image_files)
-            last_id = int(last_file[6:-4])  # 'table_00123.png' -> 123
-    return last_id
-def get_last_image_id(output_dir):
-    last_id = 0
-    for subset in ['train', 'val', 'test']:
-        image_dir = os.path.join(output_dir, subset, 'images')
-        if os.path.exists(image_dir):
-            image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
-            if image_files:
-                last_file = max(image_files)
-                last_id = max(last_id, int(last_file[6:-4]))  # 'table_00123.png' -> 123
-    return last_id
-
-def save_last_image_id(output_dir, last_id):
-    with open(os.path.join(output_dir, 'last_image_id.json'), 'w') as f:
-        json.dump({'last_image_id': last_id}, f)
-
-def load_last_image_id(output_dir):
-    try:
-        with open(os.path.join(output_dir, 'last_image_id.json'), 'r') as f:
-            data = json.load(f)
-            return data['last_image_id']
-    except FileNotFoundError:
-        return 0
-def create_directory(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+def validate_cell(cell):
+    if len(cell) < 7:
+        return False
+    x1, y1, x2, y2 = cell[:4]
+    return (x2 > x1 and y2 > y1 and 
+            x2 - x1 >= 1 and y2 - y1 >= 1 and
+            all(isinstance(coord, int) for coord in [x1, y1, x2, y2]))

@@ -1,69 +1,68 @@
-#계산, 평균값 계산하기
-
-
 import cv2
 import numpy as np
-import os
-from tqdm import tqdm
-from multiprocessing import Pool, cpu_count
+from PIL import Image, ImageDraw
 
-def process_image(image_path):
-    try:
-        image = cv2.imread(image_path)
-        if image is None:
-            print(f"Failed to read image: {image_path}")
-            return None
-        
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        if image.size == 0:
-            print(f"Empty image: {image_path}")
-            return None
-        
-        mean = np.mean(image, axis=(0, 1))
-        std = np.std(image, axis=(0, 1))
-        
-        return mean, std
-    except Exception as e:
-        print(f"Error processing {image_path}: {str(e)}")
-        return None
+def create_simple_table():
+    # 간단한 3x3 표 생성
+    img = Image.new('RGB', (300, 300), color='white')
+    draw = ImageDraw.Draw(img)
+    
+    # 표 그리기
+    for i in range(4):
+        draw.line([(0, i*100), (300, i*100)], fill='black', width=2)
+        draw.line([(i*100, 0), (i*100, 300)], fill='black', width=2)
+    
+    # 셀 좌표 저장
+    cells = []
+    for i in range(3):
+        for j in range(3):
+            cells.append([j*100, i*100, (j+1)*100, (i+1)*100])
+    
+    return np.array(img), cells
 
-def calculate_mean_std(image_folder):
-    image_files = [os.path.join(image_folder, f) for f in os.listdir(image_folder) 
-                   if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'))]
+def apply_perspective(img, cells):
+    rows, cols = img.shape[:2]
+    
+    # 원근 변환을 위한 점 설정
+    src_points = np.float32([[0, 0], [cols-1, 0], [0, rows-1], [cols-1, rows-1]])
+    dst_points = np.float32([[0, 0], [cols-1, 0], [int(cols*0.1), rows-1], [int(cols*0.9), rows-1]])
+    
+    # 변환 행렬 계산
+    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+    
+    # 이미지에 원근 변환 적용
+    result = cv2.warpPerspective(img, matrix, (cols, rows))
+    
+    # 셀 좌표에 원근 변환 적용
+    transformed_cells = []
+    for cell in cells:
+        points = np.float32([[cell[0], cell[1]], [cell[2], cell[1]], [cell[2], cell[3]], [cell[0], cell[3]]]).reshape(-1, 1, 2)
+        transformed_points = cv2.perspectiveTransform(points, matrix).reshape(-1, 2)
+        x_min, y_min = np.min(transformed_points, axis=0)
+        x_max, y_max = np.max(transformed_points, axis=0)
+        transformed_cells.append([int(x_min), int(y_min), int(x_max), int(y_max)])
+    
+    return result, transformed_cells
 
-    if not image_files:
-        print(f"No image files found in {image_folder}")
-        return None, None
+def draw_cell_coordinates(img, cells):
+    for i, cell in enumerate(cells):
+        cv2.rectangle(img, (cell[0], cell[1]), (cell[2], cell[3]), (0, 255, 0), 2)
+        cv2.putText(img, f"Cell {i+1}", (cell[0], cell[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+    return img
 
-    # 사용할 프로세스 수 결정 (CPU 코어 수의 절반 사용)
-    num_processes = max(1, cpu_count() // 2)
+# 메인 실행
+original_img, original_cells = create_simple_table()
+transformed_img, transformed_cells = apply_perspective(original_img, original_cells)
 
-    with Pool(processes=num_processes) as pool:
-        results = list(tqdm(pool.imap(process_image, image_files), total=len(image_files), desc="Processing images"))
+# 원본 이미지에 셀 좌표 표시
+original_with_coords = draw_cell_coordinates(original_img.copy(), original_cells)
 
-    # None 값 제거 및 유효한 결과만 추출
-    valid_results = [r for r in results if r is not None]
+# 변환된 이미지에 셀 좌표 표시
+transformed_with_coords = draw_cell_coordinates(transformed_img.copy(), transformed_cells)
 
-    if not valid_results:
-        print("No valid images processed")
-        return None, None
+# 결과 저장
+cv2.imwrite('original_table.png', cv2.cvtColor(original_with_coords, cv2.COLOR_RGB2BGR))
+cv2.imwrite('transformed_table.png', transformed_with_coords)
 
-    means, stds = zip(*valid_results)
-    overall_mean = np.mean(means, axis=0)
-    overall_std = np.mean(stds, axis=0)
-
-    return overall_mean, overall_std
-
-if __name__ == '__main__':
-    # 이미지 폴더 경로 지정
-    image_folder = r"D:\Projects\OCR-LEARNIGN-PROJECT\OCR-PROJECT_OLD\yolox_table_dataset_simple\train\images"
-
-    mean, std = calculate_mean_std(image_folder)
-
-    if mean is not None and std is not None:
-        print(f"Mean: {mean}")
-        print(f"Std: {std}")
-    else:
-        print("Failed to calculate mean and std")
-
+print("Original cell coordinates:", original_cells)
+print("Transformed cell coordinates:", transformed_cells)

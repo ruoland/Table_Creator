@@ -1,289 +1,334 @@
-import random, string
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
+
+import cv2
+
+import numpy as np
+import random
 from dataset_utils import *
 from dataset_constant import *
-from opti_calc import *
-def draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect):
-    line_widths = []
-    line_color = get_line_color(bg_color)
-    merged_cells = set()
-    removed_lines = set()
-    
-    # 병합된 셀 정보 추적
-    for cell in cells:
-        if len(cell) > 6 and cell[6]:
-            for r in range(cell[7], cell[9] + 1):
-                for c in range(cell[8], cell[10] + 1):
-                    merged_cells.add((r, c))
-    
-    # 외곽선 그리기
-    if random.random() > 0.2:
-        outer_line_thickness = random.randint(1, 5)
-        corners = [
-            (table_bbox[0], table_bbox[1]),
-            (table_bbox[2], table_bbox[1]),
-            (table_bbox[2], table_bbox[3]),
-            (table_bbox[0], table_bbox[3])
-        ]
-        for i in range(4):
-            start, end = corners[i], corners[(i+1)%4]
-            draw_cell_line(draw, start, end, line_color, outer_line_thickness, is_imperfect)
-            line_widths.append(outer_line_thickness)
+import logging
+from dataset_config import config
+from dataset_draw_text import add_text_to_cell
+from PIL import ImageFont, ImageDraw, ImageFilter
 
-    # 각 셀에 대한 선 그리기
-    for cell in cells:
-        line_thickness = random.randint(1, 3)
-        row, col = cell[4], cell[5]
-        is_merged = (row, col) in merged_cells
-        
-        # 셀의 각 면에 대한 좌표
-        top = ((cell[0], cell[1]), (cell[2], cell[1]))
-        bottom = ((cell[0], cell[3]), (cell[2], cell[3]))
-        left = ((cell[0], cell[1]), (cell[0], cell[3]))
-        right = ((cell[2], cell[1]), (cell[2], cell[3]))
-        
-        # 상단과 하단 선은 항상 그리기
-        draw_cell_line(draw, *top, line_color, line_thickness, is_imperfect)
-        draw_cell_line(draw, *bottom, line_color, line_thickness, is_imperfect)
-        
-        # 병합된 셀, 갭이 있는 표, 또는 주변에 선이 제거된 셀이 있는 경우 모든 선 그리기
-        if is_merged or has_gap or any((row+dr, col+dc) in removed_lines for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]):
-            draw_cell_line(draw, *left, line_color, line_thickness, is_imperfect)
-            draw_cell_line(draw, *right, line_color, line_thickness, is_imperfect)
-        else:
-            # 좌우 선 중 하나 또는 둘 다 그리기
-            sides_to_draw = random.sample([left, right], random.randint(1, 2))
-            for side in sides_to_draw:
-                draw_cell_line(draw, *side, line_color, line_thickness, is_imperfect)
-            
-            if len(sides_to_draw) < 2:
-                removed_lines.add((row, col))
-
-        line_widths.extend([line_thickness] * 4)
-
-    # 불완전한 테이블 생성 (일부 셀 숨기기)
-    if is_imperfect and len(cells) > 4:
-        num_cells_to_hide = random.randint(1, max(1, len(cells) // 4))
-        cells_to_hide = random.sample([cell for cell in cells if (cell[4], cell[5]) not in merged_cells and (cell[4], cell[5]) not in removed_lines], num_cells_to_hide)
-        for cell in cells_to_hide:
-            draw.rectangle([cell[0], cell[1], cell[2], cell[3]], fill=bg_color)
-
-    return line_widths, bool(line_widths)  # 외곽선이 그려졌는지 여부 반환
-
-
+# 로깅 설정
 
 def draw_cell_line(draw, start, end, color, thickness, is_imperfect):
-    """
-    셀의 경계선을 그리는 함수입니다.
-    
-    :param draw: PIL.ImageDraw 객체
-    :param start: 선의 시작점 (x, y) 튜플
-    :param end: 선의 끝점 (x, y) 튜플
-    :param color: 선의 색상 (RGB 튜플 또는 정수)
-    :param thickness: 선의 두께
-    :param is_imperfect: 불완전한 선을 그릴지 여부 (True/False)
-    """
     x1, y1 = start
     x2, y2 = end
     
-    # 기본 선 그리기
-    draw.line((start, end), fill=color, width=thickness)
-    
-    if is_imperfect:
-        # 20% 확률로 돌출부 추가
-        if random.random() < 0.2:
-            mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2  # 선의 중점 계산
-            protrusion_thickness = random.randint(1, 5)  # 돌출부 두께 랜덤 설정
-            protrusion_length = random.randint(1, 3)  # 돌출부 길이 랜덤 설정
-            
-            # color가 튜플인 경우 각 채널별로 255를 초과하지 않도록 처리
-            if isinstance(color, tuple):
-                protrusion_color = tuple(min(255, c) for c in color)
-            else:
-                protrusion_color = min(255, color)
-            
-            # 수직선 또는 수평선에 따라 돌출부 방향 결정
-            if x1 == x2:  # 수직선
-                draw.line((mid_x, mid_y, mid_x + protrusion_length, mid_y), fill=protrusion_color, width=protrusion_thickness)
-            else:  # 수평선
-                draw.line((mid_x, mid_y, mid_x, mid_y + protrusion_length), fill=protrusion_color, width=protrusion_thickness)
+    try:
+        draw.line([start, end], fill=color, width=thickness)
         
-        # 20% 확률로 점 추가
-        if random.random() < 0.2:
-            num_dots = random.randint(1, 3)  # 추가할 점의 개수 랜덤 설정
-            for _ in range(num_dots):
-                # 선 위의 랜덤한 위치에 점 추가
-                dot_x = random.randint(min(x1, x2), max(x1, x2))
-                dot_y = random.randint(min(y1, y2), max(y1, y2))
-                dot_size = random.randint(1, 2)  # 점의 크기 랜덤 설정
-                draw.ellipse((dot_x, dot_y, dot_x + dot_size, dot_y + dot_size), fill=color)
+        if is_imperfect:
+            if random.random() < 0.2:
+                mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
+                protrusion_thickness = random.randint(1, 5)
+                protrusion_length = random.randint(1, 3)
+                
+                protrusion_color = validate_color(color)
+                
+                if x1 == x2:
+                    draw.line([(mid_x, mid_y), (mid_x + protrusion_length, mid_y)], 
+                              fill=protrusion_color, width=protrusion_thickness)
+                else:
+                    draw.line([(mid_x, mid_y), (mid_x, mid_y + protrusion_length)], 
+                              fill=protrusion_color, width=protrusion_thickness)
+            
+            if random.random() < 0.2:
+                num_dots = random.randint(1, 3)
+                for _ in range(num_dots):
+                    dot_x = random.randint(min(x1, x2), max(x1, x2))
+                    dot_y = random.randint(min(y1, y2), max(y1, y2))
+                    dot_size = random.randint(1, 2)
+                    draw.ellipse([(dot_x-dot_size, dot_y-dot_size), 
+                                  (dot_x+dot_size, dot_y+dot_size)], 
+                                 fill=color)
+    except Exception as e:
+        logger.error(f"Error drawing cell line: {e}")
+
+def draw_cell_lines(draw, cell, line_color, line_thickness, is_merged, has_gap):
+    draw.line([(cell[0], cell[1]), (cell[2], cell[1])], fill=line_color, width=line_thickness)
+    draw.line([(cell[0], cell[3]), (cell[2], cell[3])], fill=line_color, width=line_thickness)
+    
+    if is_merged or has_gap:
+        draw.line([(cell[0], cell[1]), (cell[0], cell[3])], fill=line_color, width=line_thickness)
+        draw.line([(cell[2], cell[1]), (cell[2], cell[3])], fill=line_color, width=line_thickness)
+    else:
+        sides_to_draw = random.sample([(cell[0], cell[1], cell[0], cell[3]), 
+                                       (cell[2], cell[1], cell[2], cell[3])], 
+                                      random.randint(1, 2))
+        for side in sides_to_draw:
+            draw.line([(side[0], side[1]), (side[2], side[3])], fill=line_color, width=line_thickness)
+
 def apply_imperfections(img, cells):
-    draw = ImageDraw.Draw(img)
+    if not config.enable_imperfections:
+        return img
+
     width, height = img.size
+    draw = ImageDraw.Draw(img)
 
     if random.random() < 0.3:
         img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.3, 0.7)))
     
     if random.random() < 0.3:
         for _ in range(random.randint(1, 3)):
-            x1, y1 = random.randint(0, width), random.randint(0, height)
-            x2, y2 = random.randint(0, width), random.randint(0, height)
-            gap_start = random.uniform(0.3, 0.7)
-            gap_end = gap_start + random.uniform(0.1, 0.3)
+            x1, y1 = random.randint(0, width-1), random.randint(0, height-1)
+            x2, y2 = random.randint(0, width-1), random.randint(0, height-1)
             
-            draw.line((x1, y1, x1 + (x2-x1)*gap_start, y1 + (y2-y1)*gap_start), fill=255, width=1)
-            draw.line((x1 + (x2-x1)*gap_end, y1 + (y2-y1)*gap_end, x2, y2), fill=255, width=1)
+            gap_start = random.uniform(0.1, 1.0)
+            gap_end = min(gap_start + random.uniform(0.1, 0.6), 1.0)
+            
+            draw.line([(x1, y1), 
+                       (int(x1 + (x2-x1)*gap_start), int(y1 + (y2-y1)*gap_start))], 
+                      fill=(255, 255, 255), width=1)
+            draw.line([(int(x1 + (x2-x1)*gap_end), int(y1 + (y2-y1)*gap_end)), 
+                       (x2, y2)], 
+                      fill=(255, 255, 255), width=1)
     
     for cell in cells:
         if random.random() < 0.1:
-            x1, y1, x2, y2 = cell[:4]
-            start_x, start_y = random.randint(x1, x2), random.randint(y1, y2)
-            end_x, end_y = random.randint(x1, x2), random.randint(y1, y2)
-            draw.line((start_x, start_y, end_x, end_y), fill=0, width=random.randint(1, 3))
+            x1, y1, x2, y2 = map(int, cell[:4])
+            if x2 > x1 and y2 > y1:
+                start_x = random.randint(x1, max(x1, x2-1))
+                start_y = random.randint(y1, max(y1, y2-1))
+                end_x = random.randint(start_x, x2)
+                end_y = random.randint(start_y, y2)
+                draw.line([(start_x, start_y), (end_x, end_y)], fill=(0, 0, 0), width=random.randint(1, 3))
     
     return img
-def add_shapes_to_cell(draw, cell, bg_color, x, y):
-    cell_width, cell_height = cell[2] - cell[0], cell[3] - cell[1]
-    max_size = min(cell_width, cell_height) // 2
+
+
+def draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect):
+    line_color = get_line_color(bg_color)
+    header_color = get_header_color(bg_color)
     
-    color = get_line_color(bg_color)
-    
-    for _ in range(random.randint(1, 3)):
-        shape_type = random.choice(['rectangle', 'ellipse', 'triangle', 'line', 'arc', 'polygon'])
-        size = random.randint(max_size // 2, max_size)
-        angle = random.randint(0, 360)
+    for cell in cells:
+        if not validate_cell(cell):
+            logger.warning(f"Invalid cell: {cell}")
+            continue
         
-        shape_img = Image.new('L', (size, size), color=0)
-        shape_draw = ImageDraw.Draw(shape_img)
+        # 테이블 경계 내에 있도록 셀 좌표 조정
+        x1, y1, x2, y2 = max(cell[0], table_bbox[0]), max(cell[1], table_bbox[1]), \
+                         min(cell[2], table_bbox[2]), min(cell[3], table_bbox[3])
         
-        draw_shape(shape_draw, shape_type, size)
+        if x2 <= x1 or y2 <= y1:
+            logger.warning(f"Cell outside table boundaries: {cell}")
+            continue
         
-        rotated_shape = shape_img.rotate(angle, expand=True)
+        is_header = cell[7] if len(cell) > 7 else False
+        cell_color = header_color if is_header else line_color
+        is_overflow = len(cell) > 8 and cell[3] > cell[8]
         
-        paste_x = max(cell[0], min(x - rotated_shape.width // 2, cell[2] - rotated_shape.width))
-        paste_y = max(cell[1], min(y - rotated_shape.height // 2, cell[3] - rotated_shape.height))
+        try:
+            draw_cell(draw, [x1, y1, x2, y2] + cell[4:], cell_color, is_header, has_gap, is_imperfect, is_overflow, table_bbox, bg_color)
+        except Exception as e:
+            logger.error(f"Error drawing cell {cell}: {str(e)}")
+    
+    if config.enable_outer_border:
+        draw_outer_border(draw, table_bbox, line_color)
+def draw_cell(draw, cell, color, is_header, has_gap, is_imperfect, is_overflow, table_bbox, bg_color):
+    x1, y1, x2, y2 = cell[:4]
+    original_y2 = cell[8] if len(cell) > 8 else y2
+    
+    x1, x2 = min(x1, x2), max(x1, x2)
+    y1, y2 = min(y1, y2), max(y1, y2)
+    
+    x1, y1 = max(x1, table_bbox[0]), max(y1, table_bbox[1])
+    x2, y2 = min(x2, table_bbox[2]), min(y2, table_bbox[3])
+    
+    if x2 <= x1 or y2 <= y1:
+        logger.warning(f"Cell outside table boundaries: {cell}")
+        return
+    
+    draw.rectangle([x1, y1, x2, y2], fill=bg_color)
+    
+    if is_overflow:
+        draw.rectangle([x1, y1, x2, y2], outline=color)
+        overflow_line_y = min(original_y2, table_bbox[3])
+        if overflow_line_y > y1:
+            draw.line([x1, overflow_line_y, x2, overflow_line_y], fill=color, width=1)
+    else:
+        if config.enable_cell_border or has_gap:
+            draw.rectangle([x1, y1, x2, y2], outline=color)
+        else:
+            draw.line([x1, y1, x2, y1], fill=color)
+            draw.line([x1, y2, x2, y2], fill=color)
+    
+    draw.line([x1, y1, x1, y2], fill=color)
+    draw.line([x2, y1, x2, y2], fill=color)
+
+    if is_imperfect:
+        apply_cell_imperfections(draw, x1, y1, x2, y2, color)
+
+
+def apply_cell_imperfections(draw, x1, y1, x2, y2, color):
+    if random.random() < 0.2:
+        mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
+        protrusion_thickness = random.randint(1, 3)
+        protrusion_length = random.randint(1, 2)
         
-        draw.bitmap((paste_x, paste_y), rotated_shape, fill=color)
-        #print(f"도형 추가됨, {paste_x}, {paste_y}, {color}")  # 디버깅용 출력
-def adjust_font_size(draw, text, font, max_width, max_height):
-    while font.size > 8:  # 최소 폰트 크기 설정
-        bbox = draw.multiline_textbbox((0, 0), text, font=font)
-        if bbox[2] - bbox[0] <= max_width and bbox[3] - bbox[1] <= max_height:
-            break
-        font = ImageFont.truetype(font.path, font.size - 1)
-    return font
-def add_text_to_cell(draw, cell, font_path, text_color, x, y, position):
-    cell_width, cell_height = cell[2] - cell[0], cell[3] - cell[1]
-    padding = 4  # 셀 경계로부터의 여백
+        if random.choice([True, False]):
+            draw.line([(mid_x, y1), (mid_x, y1 - protrusion_length)], fill=color, width=protrusion_thickness)
+        else:
+            draw.line([(x1, mid_y), (x1 - protrusion_length, mid_y)], fill=color, width=protrusion_thickness)
+def get_merged_cells(cells):
+    merged_cells = set()
+    for cell in cells:
+        if len(cell) > 6 and cell[6]:
+            for r in range(cell[7], cell[9] + 1):
+                for c in range(cell[8], cell[10] + 1):
+                    merged_cells.add((r, c))
+    return merged_cells
+
+def draw_outer_border(draw, table_bbox, line_color):
+    if random.random() > 0.2:
+        outer_line_thickness = random.randint(1, 3)
+        draw.rectangle(table_bbox, outline=line_color, width=outer_line_thickness)
+
+def get_overflow_color(base_color):
+    # 기본 색상을 기반으로 오버플로우 색상 생성 (약간 더 밝게)
+    r, g, b = base_color
+    return (min(r + 30, 255), min(g + 30, 255), min(b + 30, 255))
+def draw_overflow(draw, cell, original_x2, original_y2, color):
+    x1, y1, x2, y2 = map(int, cell[:4])
+    dash_length = 5
+    space_length = 5
     
-    # 폰트 크기 조정
-    font_size = max(8, min(int(cell_height * 0.2), int(cell_width * 0.1)))
-    font = ImageFont.truetype(font_path, font_size)
+    if x2 > original_x2:
+        for x in range(int(original_x2), x2, dash_length + space_length):
+            draw.line([(x, y1), (min(x + dash_length, x2), y1)], fill=color, width=1)
+            draw.line([(x, y2), (min(x + dash_length, x2), y2)], fill=color, width=1)
     
-    # 텍스트 생성
-    text = random_text(min_length=1, max_length=max(1, min(20, cell_width // font_size)))
+    if y2 > original_y2:
+        for y in range(int(original_y2), y2, dash_length + space_length):
+            draw.line([(x1, y), (x1, min(y + dash_length, y2))], fill=color, width=1)
+            draw.line([(x2, y), (x2, min(y + dash_length, y2))], fill=color, width=1)
+
+def get_header_color(bg_color):
+    return (0, 0, 0) if sum(bg_color) > 382 else (255, 255, 255)
+
+def apply_imperfections(img, cells):
+    if not config.enable_imperfect_lines:
+        return img
+
+    width, height = img.size
+    draw = ImageDraw.Draw(img)
+
+    if random.random() < 0.3:
+        img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.3, 0.7)))
     
-    # 텍스트 줄바꿈
-    wrapped_text = wrap_text(text, font, cell_width - 2*padding)
+    if random.random() < 0.3:
+        for _ in range(random.randint(1, 3)):
+            x1, y1 = random.randint(0, width-1), random.randint(0, height-1)
+            x2, y2 = random.randint(0, width-1), random.randint(0, height-1)
+            
+            gap_start = random.uniform(0.1, 1.0)
+            gap_end = min(gap_start + random.uniform(0.1, 0.6), 1.0)
+            
+            draw.line([(x1, y1), 
+                       (int(x1 + (x2-x1)*gap_start), int(y1 + (y2-y1)*gap_start))], 
+                      fill=(255, 255, 255), width=1)
+            draw.line([(int(x1 + (x2-x1)*gap_end), int(y1 + (y2-y1)*gap_end)), 
+                       (x2, y2)], 
+                      fill=(255, 255, 255), width=1)
     
-    # 텍스트 크기 계산
-    bbox = draw.multiline_textbbox((0, 0), wrapped_text, font=font)
-    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    for cell in cells:
+        if random.random() < 0.1:
+            x1, y1, x2, y2 = map(int, cell[:4])
+            if x2 > x1 and y2 > y1:
+                start_x = random.randint(x1, max(x1, x2-1))
+                start_y = random.randint(y1, max(y1, y2-1))
+                end_x = random.randint(start_x, x2)
+                end_y = random.randint(start_y, y2)
+                draw.line([(start_x, start_y), (end_x, end_y)], fill=(0, 0, 0), width=random.randint(1, 3))
     
-    # 텍스트가 셀을 벗어나는 경우 폰트 크기 조정
-    while text_height > cell_height - 2*padding or text_width > cell_width - 2*padding:
-        font_size -= 1
-        if font_size < 8:  # 최소 폰트 크기
-            font_size = 8
-            break
-        font = ImageFont.truetype(font_path, font_size)
-        wrapped_text = wrap_text(text, font, cell_width - 2*padding)
-        bbox = draw.multiline_textbbox((0, 0), wrapped_text, font=font)
-        text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    return img
+def add_shapes(img, x, y, width, height, bg_color, num_shapes=None, size_range=None):
+    draw = ImageDraw.Draw(img)  # ImageDraw 객체 생성
+    shape_color = get_line_color(bg_color)
+    num_shapes = num_shapes if num_shapes is not None else random.randint(2, 8)
+    size_range = size_range or (MIN_SHAPE_SIZE, MAX_SHAPE_SIZE)
     
-    # 텍스트 위치 계산
-    text_position = calculate_text_position(cell[0]+padding, cell[1]+padding, 
-                                            cell_width-2*padding, cell_height-2*padding, 
-                                            text_width, text_height, position)
-    
-    # 텍스트 그리기
-    draw.multiline_text(text_position, wrapped_text, font=font, fill=text_color, align='center')
-    
-    
-    return wrapped_text
-def add_content_to_cells(draw, cells, font_path, bg_color, empty_cell_ratio=0.2):
-    #print(f"Debug: add_content_to_cells - bg_color = {bg_color}, type = {type(bg_color)}")
+    max_y = y
+    for _ in range(num_shapes):
+        shape_type = random.choice(SHAPE_TYPES)
+        size = random.randint(*size_range)
+        shape_x = random.randint(x, max(x, x + width - size))
+        shape_y = random.randint(y, max(y, y + height - size))
+        
+        draw_shape(draw, shape_type, size, shape_x, shape_y, shape_color)
+        max_y = max(max_y, shape_y + size)
+
+    return max_y - y + random.randint(10, 30)
+
+def draw_shape(draw, shape_type, size, x, y, color):
+    try:
+        if shape_type == 'rectangle':
+            draw.rectangle([x, y, x + size, y + size], outline=color, width=2)
+        elif shape_type == 'circle':
+            draw.ellipse([x, y, x + size, y + size], outline=color, width=2)
+        elif shape_type == 'triangle':
+            draw.polygon([(x, y + size), (x + size, y + size), (x + size // 2, y)], outline=color, width=2)
+        elif shape_type == 'line':
+            draw.line([(x, y), (x + size, y + size)], fill=color, width=2)
+        elif shape_type == 'arc':
+            draw.arc([x, y, x + size, y + size], 0, 270, fill=color, width=2)
+        elif shape_type == 'polygon':
+            pts = [(random.randint(x, x + size), random.randint(y, y + size)) for _ in range(5)]
+            draw.polygon(pts, outline=color, width=2)
+    except Exception as e:
+        logger.error(f"Error drawing shape: {e}")
+
+def add_title_and_shapes(draw, image_width, image_height, margin_top, bg_color):
+    title_height = add_title_to_image(draw, image_width, margin_top, bg_color)
+    shapes_height = add_shapes(draw, image_width, image_height, title_height, bg_color)
+    return title_height + shapes_height
+def add_content_to_cells(img, cells, font_path, bg_color, empty_cell_ratio=EMPTY_CELL_RATIO):
     for cell in cells:
         if random.random() < empty_cell_ratio:
             continue
         
-        content_type = random.choice(['text', 'shapes', 'mixed'])
-        position = random.choice(['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right'])
-        
-        cell_width = cell[2] - cell[0]
-        cell_height = cell[3] - cell[1]
-        
-        x, y = calculate_position(cell, position)
-        
+        cell_width, cell_height = int(cell[2] - cell[0]), int(cell[3] - cell[1])
+        if cell_width < MIN_CELL_SIZE_FOR_CONTENT or cell_height < MIN_CELL_SIZE_FOR_CONTENT:
+            continue
+
+        content_type = random.choice(CELL_CONTENT_TYPES)
+        position = random.choice(TEXT_POSITIONS)
         content_color = get_line_color(bg_color)
         
-        if content_type in ['text', 'mixed']:
-            text = add_text_to_cell(draw, cell, font_path, content_color, x, y, position)
+        if config.enable_text_generation and content_type in ['text', 'mixed']:
+            add_text_to_cell(ImageDraw.Draw(img), cell, font_path, content_color, position)
         
-        if content_type in ['shapes', 'mixed']:
-            add_shapes_to_cell(draw, cell, bg_color, x, y)
-        
-        #print(f"셀 정보: 위치({cell[0]}, {cell[1]}, {cell[2]}, {cell[3]}), 크기({cell_width}x{cell_height})")
+        if config.enable_shapes and content_type in ['shapes', 'mixed']:
+            add_shapes(img, cell[0], cell[1], cell_width, cell_height, bg_color, num_shapes=random.randint(1, 2), size_range=(5, min(cell_width, cell_height) // 3))            
+def add_title_to_image(img, image_width, image_height, margin_top, bg_color):
+    if not config.enable_title:
+        return 0
 
-
-def add_noise_around_text(draw, x, y, width, height, bg_color):
-    noise_color = get_line_color(bg_color)
-    num_noise = random.randint(5, 20)
-    for _ in range(num_noise):
-        noise_x = x + random.randint(-width//2, width//2)
-        noise_y = y + random.randint(-height//2, height//2)
-        noise_size = random.randint(1, 3)
-        if random.random() < 0.7:
-            draw.ellipse([noise_x, noise_y, noise_x+noise_size, noise_y+noise_size], fill=noise_color)
-        else:
-            end_x = noise_x + random.randint(-5, 5)
-            end_y = noise_y + random.randint(-5, 5)
-            draw.line([noise_x, noise_y, end_x, end_y], fill=noise_color, width=1)
-def add_shapes_to_cell(draw, cell, bg_color, x, y):
-    cell_width, cell_height = cell[2] - cell[0], cell[3] - cell[1]
-    max_size = min(cell_width, cell_height) // 2
+    bg_color = validate_color(bg_color)
+    title = generate_random_title()
     
-    color = get_line_color(bg_color)
+    font_size = max(MIN_TITLE_SIZE, min(random.randint(int(image_width * 0.02), int(image_width * 0.1)), MAX_TITLE_SIZE))
+    font = ImageFont.truetype(random.choice(FONTS), font_size)
     
-    for _ in range(random.randint(1, 3)):
-        shape_type = random.choice(['rectangle', 'ellipse', 'triangle', 'line', 'arc', 'polygon'])
-        size = random.randint(max_size // 2, max_size)
-        angle = random.randint(0, 360)
-        
-        shape_img = Image.new('L', (size, size), color=0)
-        shape_draw = ImageDraw.Draw(shape_img)
-        
-        draw_shape(shape_draw, shape_type, size)
-        
-        rotated_shape = shape_img.rotate(angle, expand=True)
-        
-        paste_x = max(cell[0], min(x - rotated_shape.width // 2, cell[2] - rotated_shape.width))
-        paste_y = max(cell[1], min(y - rotated_shape.height // 2, cell[3] - rotated_shape.height))
-        
-        draw.bitmap((paste_x, paste_y), rotated_shape, fill=color)
-        #print(f"도형 추가됨: 유형({shape_type}), 위치({paste_x}, {paste_y}), 크기({size}), 색상{color}")
+    draw = ImageDraw.Draw(img)
+    left, top, right, bottom = draw.textbbox((0, 0), title, font=font)
+    text_width, text_height = right - left, bottom - top
+    
+    if text_width > image_width * 0.9:
+        words = title.split()
+        half = len(words) // 2
+        title = ' '.join(words[:half]) + '\n' + ' '.join(words[half:])
+        left, top, right, bottom = draw.textbbox((0, 0), title, font=font)
+        text_width, text_height = right - left, bottom - top
+    
+    x = (image_width - text_width) // 2
+    y = margin_top + random.randint(5, 20)
+    text_color = get_line_color(bg_color)
+    
+    draw.text((x, y), title, font=font, fill=text_color)
 
-def draw_shape(shape_draw, shape_type, size):
-    if shape_type == 'rectangle':
-        shape_draw.rectangle([0, 0, size-1, size-1], outline=255, width=2)
-    elif shape_type == 'ellipse':
-        shape_draw.ellipse([0, 0, size-1, size-1], outline=255, width=2)
-    elif shape_type == 'triangle':
-        shape_draw.polygon([(size//2, 0), (0, size-1), (size-1, size-1)], outline=255, width=2)
-    elif shape_type == 'line':
-        shape_draw.line([(0, 0), (size-1, size-1)], fill=255, width=2)
-    elif shape_type == 'arc':
-        shape_draw.arc([0, 0, size-1, size-1], 0, 270, fill=255, width=2)
-    elif shape_type == 'polygon':
-        points = [(random.randint(0, size-1), random.randint(0, size-1)) for _ in range(5)]
-        shape_draw.polygon(points, outline=255, width=2)
+    return y + text_height
+
+

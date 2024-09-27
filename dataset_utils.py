@@ -1,28 +1,74 @@
 import random, os
-from tqdm import tqdm
-import numpy as np
+
 import logging
-import pandas as pd
-import csv, json
-import yaml
+
 from typing import List, Tuple
 
 from dataset_constant import *
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+def validate_cell(cell):
+    return (len(cell) >= 4 and 
+            cell[2] > cell[0] and 
+            cell[3] > cell[1] and 
+            cell[2] - cell[0] >= 1 and
+            cell[3] - cell[1] >= 1)
+def validate_color(color):
+    if isinstance(color, int):
+        return (color, color, color)
+    elif isinstance(color, tuple) and len(color) == 3:
+        return color
+    else:
+        logger.warning(f"Invalid color format: {color}. Using default black.")
+        return (0, 0, 0)
+
+
 def get_line_color(bg_color):
-    #print(f"Debug: get_line_color input - bg_color = {bg_color}, type = {type(bg_color)}")
     if isinstance(bg_color, tuple) and len(bg_color) == 3:
         brightness = sum(bg_color) / 3
-        result = (0, 0, 0) if brightness > 128 else (255, 255, 255)
     elif isinstance(bg_color, int):
-        result = (0, 0, 0) if bg_color > 128 else (255, 255, 255)
+        brightness = bg_color
     else:
         raise ValueError(f"Invalid background color format: {bg_color}")
-    #print(f"Debug: get_line_color output - result = {result}")
-    return result
 
+    if brightness > 128:
+        # 밝은 배경: 검은색에서 어두운 회색까지
+        gray_value = random.randint(0, 64)
+    else:
+        # 어두운 배경: 흰색에서 밝은 회색까지
+        gray_value = random.randint(192, 255)
+    
+    # 20% 확률로 약간 희미한 색상 생성
+    if random.random() < 0.2:
+        if brightness > 128:
+            # 밝은 배경에 대해 약간 희미한 회색
+            gray_value = random.randint(64, 128)
+        else:
+            # 어두운 배경에 대해 약간 희미한 밝은 회색
+            gray_value = random.randint(128, 192)
+
+    return (gray_value, gray_value, gray_value)
+
+def generate_random_resolution():
+    """랜덤한 이미지 해상도 생성 (여백 포함)"""
+    width = random.randint(MIN_IMAGE_WIDTH, MAX_IMAGE_WIDTH)
+    height = random.randint(MIN_IMAGE_HEIGHT, MAX_IMAGE_HEIGHT)
+    margin_left = random.randint(MIN_MARGIN, MAX_MARGIN)
+    margin_right = random.randint(MIN_MARGIN, MAX_MARGIN)
+    margin_top = random.randint(MIN_MARGIN, MAX_MARGIN)
+    margin_bottom = random.randint(MIN_MARGIN, MAX_MARGIN)
+    width = width - (width % 32) + margin_left + margin_right
+    height = height - (height % 32) + margin_top + margin_bottom
+    return (width, height), (margin_left, margin_top, margin_right, margin_bottom)
+def count_existing_images(output_dir):
+    total_count = 0
+    for subset in ['train', 'val']:
+        image_dir = os.path.join(output_dir, subset, 'images')
+        if os.path.exists(image_dir):
+            total_count += len([f for f in os.listdir(image_dir) if f.endswith('.png')])
+    return total_count
 
 def random_text(min_length: int = 1, max_length: int = 10) -> str:
     """랜덤한 텍스트를 생성합니다. 40% 확률로 수업 정보, 50% 확률로 자주 사용되는 단어, 10% 확률로 무작위 글자 조합을 반환합니다."""
@@ -71,29 +117,12 @@ def wrap_text(text: str, font, max_width: int) -> str:
         lines.append(' '.join(current_line))
     return '\n'.join(lines)
 
-def safe_list_access(lst: List, index: int, default=None):
-    """리스트의 안전한 접근을 위한 함수입니다."""
-    try:
-        return lst[index]
-    except IndexError:
-        logger.warning(f"Attempted to access index {index} in a list of length {len(lst)}")
-        return default
 
-def calculate_summary_stats(stats: List[dict]) -> dict:
-    """이미지 생성 통계를 계산합니다."""
-    summary = {
-        'total_images': len(stats),
-        'imperfect_ratio': sum(1 for s in stats if s['is_imperfect']) / len(stats),
-        'bg_mode_ratio': {
-            'light': sum(1 for s in stats if s['bg_mode'] == 'light') / len(stats),
-            'dark': sum(1 for s in stats if s['bg_mode'] == 'dark') / len(stats)
-        },
-        'avg_image_size': {
-            'width': sum(s['image_width'] for s in stats) / len(stats),
-            'height': sum(s['image_height'] for s in stats) / len(stats)
-        },
-        'avg_num_cells': sum(s['num_cells'] for s in stats) / len(stats),
-        'avg_num_rows': sum(s['rows'] for s in stats) / len(stats),
-        'avg_num_cols': sum(s['cols'] for s in stats) / len(stats)
-    }
-    return summary
+
+def is_overlapping(area1, area2):
+    """두 영역이 겹치는지 확인"""
+    return not (area1[2] <= area2[0] or area1[0] >= area2[2] or
+                area1[3] <= area2[1] or area1[1] >= area2[3])
+    
+    
+

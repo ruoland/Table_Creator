@@ -1,142 +1,184 @@
-from PIL import Image, ImageDraw, ImageFilter
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw
 import random
+from PIL import ImageFont
 
-def create_simple_table(width, height, rows, cols):
+def transform_cell_coordinates(cell, matrix, width, height):
+    x1, y1, x2, y2 = cell[:4]
+    points = np.float32([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]).reshape(-1, 1, 2)
+    transformed_points = cv2.perspectiveTransform(points, matrix).reshape(-1, 2)
+    
+    new_x1 = max(0, min(transformed_points[:, 0].min(), width - 1))
+    new_y1 = max(0, min(transformed_points[:, 1].min(), height - 1))
+    new_x2 = max(0, min(transformed_points[:, 0].max(), width - 1))
+    new_y2 = max(0, min(transformed_points[:, 1].max(), height - 1))
+    
+    return [new_x1, new_y1, new_x2, new_y2]  # cell[4:]를 제거
+
+def create_grid_test_image_with_cells(width, height, grid_size=50, cell_count=5, perspective_matrix=None):
+    # 원본 격자 이미지 생성
     image = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(image)
 
-    cell_width = width // cols
-    cell_height = height // rows
+    # 세로선 그리기
+    for x in range(0, width, grid_size):
+        draw.line([(x, 0), (x, height)], fill='lightgray', width=1)
 
-    cell_corners = []
+    # 가로선 그리기
+    for y in range(0, height, grid_size):
+        draw.line([(0, y), (width, y)], fill='lightgray', width=1)
 
-    for i in range(rows + 1):
-        y = i * cell_height
-        draw.line([(0, y), (width, y)], fill='black', width=2)
-        for j in range(cols + 1):
-            x = j * cell_width
-            if i == 0:
-                draw.line([(x, 0), (x, height)], fill='black', width=2)
-            cell_corners.append((x, y))
+    # 격자 교차점에 작은 점 찍기
+    for x in range(0, width, grid_size):
+        for y in range(0, height, grid_size):
+            draw.ellipse([(x-1, y-1), (x+1, y+1)], fill='gray')
 
-    return image, cell_corners
+    # 큰 셀 생성
+    cells = []
+    for _ in range(cell_count):
+        cell_width = random.randint(grid_size*2, grid_size*5)
+        cell_height = random.randint(grid_size*2, grid_size*5)
+        x = random.randint(0, width - cell_width)
+        y = random.randint(0, height - cell_height)
+        cells.append((x, y, x + cell_width, y + cell_height))
 
-def draw_cell_corner_points(image, corners, radius=3, color=(255, 0, 0)):
+    # 큰 셀 그리기
+    for i, (x1, y1, x2, y2) in enumerate(cells):
+        color = (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+        draw.rectangle([x1, y1, x2, y2], outline='black', width=2, fill=color)
+        # 셀 번호 표시
+        draw.text((x1+5, y1+5), str(i+1), fill='black')
+
+    # 원근 변환 적용 (만약 perspective_matrix가 제공된 경우)
+    if perspective_matrix is not None:
+        # PIL 이미지를 OpenCV 형식으로 변환
+        cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        
+        # 원근 변환 적용
+        warped_image = cv2.warpPerspective(cv_image, perspective_matrix, (width, height))
+        
+        # 다시 PIL 이미지로 변환
+        warped_pil = Image.fromarray(cv2.cvtColor(warped_image, cv2.COLOR_BGR2RGB))
+        
+        return image, warped_pil, cells
+    
+    return image, None, cells
+
+def get_perspective_points(width, height, intensity, direction=None):
+    # 최대 오프셋을 이미지 크기의 일정 비율로 설정 (약 30도에 해당)
+    max_offset_x = width * intensity
+    max_offset_y = height * intensity
+    
+    if direction is None:
+        # 랜덤 방향
+        top_left_x = random.uniform(0, max_offset_x)
+        top_left_y = random.uniform(0, max_offset_y)
+        top_right_x = random.uniform(width - max_offset_x, width)
+        top_right_y = random.uniform(0, max_offset_y)
+        bottom_right_x = random.uniform(width - max_offset_x, width)
+        bottom_right_y = random.uniform(height - max_offset_y, height)
+        bottom_left_x = random.uniform(0, max_offset_x)
+        bottom_left_y = random.uniform(height - max_offset_y, height)
+    else:
+        # 지정된 방향에 따른 변형
+        if direction in ['left', 'top_left', 'bottom_left']:
+            top_left_x = bottom_left_x = random.uniform(max_offset_x/2, max_offset_x)
+        else:
+            top_left_x = bottom_left_x = 0
+
+        if direction in ['right', 'top_right', 'bottom_right']:
+            top_right_x = bottom_right_x = random.uniform(width - max_offset_x, width - max_offset_x/2)
+        else:
+            top_right_x = bottom_right_x = width
+
+        if direction in ['top', 'top_left', 'top_right']:
+            top_left_y = top_right_y = random.uniform(max_offset_y/2, max_offset_y)
+        else:
+            top_left_y = top_right_y = 0
+
+        if direction in ['bottom', 'bottom_left', 'bottom_right']:
+            bottom_left_y = bottom_right_y = random.uniform(height - max_offset_y, height - max_offset_y/2)
+        else:
+            bottom_left_y = bottom_right_y = height
+
+    points = np.float32([
+        [top_left_x, top_left_y],
+        [top_right_x, top_right_y],
+        [bottom_right_x, bottom_right_y],
+        [bottom_left_x, bottom_left_y]
+    ])
+    print("Perspective points:", points)  # 로그 추가
+    return points
+def create_grid_test_image_with_cells(width, height, grid_size=50, cell_count=5, perspective_matrix=None):
+    # 원본 격자 이미지 생성
+    image = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(image)
-    for corner in corners:
-        x, y = corner
-        draw.ellipse([x-radius, y-radius, x+radius, y+radius], fill=color)
-    return image
 
-def apply_perspective_transform(image, corners, intensity=0.2):
-    width, height = image.size
-    pts1 = np.float32([[0, 0], [width-1, 0], [width-1, height-1], [0, height-1]])
-    pts2 = np.float32([[random.uniform(0, width*intensity), random.uniform(0, height*intensity)],
-                       [random.uniform(width*(1-intensity), width-1), random.uniform(0, height*intensity)],
-                       [random.uniform(width*(1-intensity), width-1), random.uniform(height*(1-intensity), height-1)],
-                       [random.uniform(0, width*intensity), random.uniform(height*(1-intensity), height-1)]])
-    
-    matrix = cv2.getPerspectiveTransform(pts1, pts2)
-    cv2_image = pil_to_cv2(image)
-    result = cv2.warpPerspective(cv2_image, matrix, (width, height))
-    
-    # Transform cell corners
-    corners_array = np.array(corners, dtype=np.float32).reshape(-1, 1, 2)
-    transformed_corners = cv2.perspectiveTransform(corners_array, matrix).reshape(-1, 2)
-    
-    return cv2_to_pil(result), transformed_corners.tolist()
+    # 격자선 그리기
+    for x in range(0, width, grid_size):
+        draw.line([(x, 0), (x, height)], fill='black', width=1)
+    for y in range(0, height, grid_size):
+        draw.line([(0, y), (width, y)], fill='black', width=1)
 
-def process_image(image, corners, apply_wrinkle=True, apply_perspective=True, apply_distortion=True, draw_corners=True):
-    if apply_wrinkle:
-        image = add_enhanced_wrinkle_effect(image, intensity=0.8, num_wrinkles=10)
-    
-    if apply_perspective:
-        image, corners = apply_perspective_transform(image, corners, intensity=0.2)
-    
-    if apply_distortion:
-        cv2_image = pil_to_cv2(image)
-        cv2_image = apply_lens_distortion(cv2_image, k1=0.1, k2=0.1)
-        image = cv2_to_pil(cv2_image)
-    
-    if draw_corners:
-        image = draw_cell_corner_points(image, corners)
-    
-    return image, corners
+    # 격자 교차점에 빨간 점 찍기
+    for x in range(0, width, grid_size):
+        for y in range(0, height, grid_size):
+            draw.ellipse([(x-3, y-3), (x+3, y+3)], fill='red')
 
+    # 큰 셀 생성
+    cells = []
+    for i in range(cell_count):
+        cell_width = random.randint(grid_size*3, grid_size*5)
+        cell_height = random.randint(grid_size*3, grid_size*5)
+        x = random.randint(0, width - cell_width)
+        y = random.randint(0, height - cell_height)
+        cells.append((x, y, x + cell_width, y + cell_height))
 
-def add_enhanced_wrinkle_effect(image, intensity=0.3, num_wrinkles=10):
-    width, height = image.size
-    wrinkle = Image.new('L', (width, height), 255)
-    draw = ImageDraw.Draw(wrinkle)
-    
-    for _ in range(num_wrinkles):
-        start = (random.randint(0, width), random.randint(0, height))
-        end = (random.randint(0, width), random.randint(0, height))
-        draw.line([start, end], fill=100, width=random.randint(1, 3))
-    
-    wrinkle = wrinkle.filter(ImageFilter.GaussianBlur(radius=3))
-    
-    img_array = np.array(image)
-    wrinkle_array = np.array(wrinkle)
-    
-    result_array = img_array * (wrinkle_array[:,:,np.newaxis] / 255.0 * intensity + (1 - intensity))
-    result_array = result_array + np.random.randint(-10, 10, result_array.shape)
-    result_array = np.clip(result_array, 0, 255).astype(np.uint8)
-    
-    result = Image.fromarray(result_array)
-    return result
+    # 큰 셀 그리기
+    for i, (x1, y1, x2, y2) in enumerate(cells):
+        color = (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+        draw.rectangle([x1, y1, x2, y2], outline='black', width=2, fill=color)
+        # 셀 번호 표시
+        draw.text((x1+5, y1+5), str(i+1), fill='black', font=ImageFont.truetype("arial.ttf", 20))
 
-def pil_to_cv2(pil_image):
-    return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+    # 대각선 그리기 (변형 효과를 더 잘 보기 위해)
+    draw.line([(0, 0), (width, height)], fill='blue', width=2)
+    draw.line([(width, 0), (0, height)], fill='blue', width=2)
 
-def cv2_to_pil(cv2_image):
-    return Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB))
-
-def apply_lens_distortion(image, k1=0.1, k2=0.1):
-    height, width = image.shape[:2]
-    camera_matrix = np.array([[width, 0, width/2],
-                              [0, height, height/2],
-                              [0, 0, 1]], dtype=np.float32)
-    dist_coeffs = np.array([k1, k2, 0, 0], dtype=np.float32)
+    # 원근 변환 적용 (만약 perspective_matrix가 제공된 경우)
+    if perspective_matrix is not None:
+        cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        warped_image = cv2.warpPerspective(cv_image, perspective_matrix, (width, height))
+        warped_pil = Image.fromarray(cv2.cvtColor(warped_image, cv2.COLOR_BGR2RGB))
+        return image, warped_pil, cells
     
-    undistorted = cv2.undistort(image, camera_matrix, dist_coeffs)
-    return undistorted
+    return image, None, cells
 
-def draw_corner_points(image, corners, radius=5, color=(0, 255, 0), thickness=-1):
-    for corner in corners:
-        cv2.circle(image, tuple(map(int, corner)), radius, color, thickness)
-    return image
+# PIL에서 폰트를 사용하기 위한 import 추가
+def test_perspective_transform_with_cells(width, height, perspective_intensity):
+    src_points = np.float32([[0, 0], [width-1, 0], [width-1, height-1], [0, height-1]])
+    dst_points = get_perspective_points(width, height, perspective_intensity)
+    print("Source points:", src_points)
+    print("Destination points:", dst_points)
 
-if __name__ == "__main__":
-    width, height = 800, 600
-    rows, cols = 6, 4
-    
-    table_image, cell_corners = create_simple_table(width, height, rows, cols)
-    
-    # 모든 효과 적용
-    processed_image, processed_corners = process_image(table_image, cell_corners, 
-                                                       apply_wrinkle=True, 
-                                                       apply_perspective=True, 
-                                                       apply_distortion=True, 
-                                                       draw_corners=True)
-    
-    # 원본 이미지 저장 (셀 모서리 점 포함)
-    draw_cell_corner_points(table_image, cell_corners).save("original_table_with_corners.png")
-    
-    # 처리된 이미지 저장
-    processed_image.save("processed_table_with_corners.png")
-    
-    print("이미지가 생성되었습니다: original_table_with_corners.png, processed_table_with_corners.png")
+    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+    print("Perspective matrix:", matrix)
 
-    # 각 효과를 개별적으로 적용한 이미지 생성
-    wrinkle_only, _ = process_image(table_image, cell_corners, apply_wrinkle=True, apply_perspective=False, apply_distortion=False, draw_corners=True)
-    perspective_only, _ = process_image(table_image, cell_corners, apply_wrinkle=False, apply_perspective=True, apply_distortion=False, draw_corners=True)
-    distortion_only, _ = process_image(table_image, cell_corners, apply_wrinkle=False, apply_perspective=False, apply_distortion=True, draw_corners=True)
+    original, warped, cells = create_grid_test_image_with_cells(width, height, grid_size=50, cell_count=5, perspective_matrix=matrix)
 
-    wrinkle_only.save("wrinkle_only_with_corners.png")
-    perspective_only.save("perspective_only_with_corners.png")
-    distortion_only.save("distortion_only_with_corners.png")
+    original.save("original_grid_with_cells.png")
+    warped.save("warped_grid_with_cells.png")
 
-    print("개별 효과 이미지가 생성되었습니다: wrinkle_only_with_corners.png, perspective_only_with_corners.png, distortion_only_with_corners.png")
+    print("Test images have been generated: 'original_grid_with_cells.png' and 'warped_grid_with_cells.png'")
+    
+    for i, cell in enumerate(cells):
+        print(f"Original Cell {i+1}: {cell}")
+        transformed_cell = transform_cell_coordinates(cell, matrix, width, height)
+        print(f"Transformed Cell {i+1}: {transformed_cell}")
+        print(f"Difference: {np.array(transformed_cell) - np.array(cell)}")
+        print()
+
+# 테스트 실행 (강도 증가)
+test_perspective_transform_with_cells(800, 600, 0.3)  # 강도를 0.5로 증가
+# 테스트 실행

@@ -1,31 +1,17 @@
 from PIL import Image, ImageColor, ImageFont, ImageDraw
 from dataset_utils import *
 from dataset_constant import *
-import logging
-from dataset_config import config
+from logging_config import  get_memory_handler, table_logger
+from dataset_config import config, MIN_CELL_SIZE_FOR_TEXT, MIN_FONT_SIZE, PADDING
 import numpy as np
-def wrap_text(text, font, max_width):
-    words = text.split()
-    lines = []
-    current_line = []
-    for word in words:
-        test_line = ' '.join(current_line + [word])
-        bbox = font.getbbox(test_line)
-        if bbox[2] - bbox[0] <= max_width:
-            current_line.append(word)
-        else:
-            if current_line:  # 현재 줄에 단어가 있으면 추가
-                lines.append(' '.join(current_line))
-                current_line = [word]
-            else:  # 현재 줄이 비어있으면 단어를 강제로 자름
-                lines.append(word[:int(max_width/font.getbbox('W')[2])])
-                current_line = []
-    if current_line:
-        lines.append(' '.join(current_line))
-    return '\n'.join(lines)
+from typing import Dict, Any
+# 상수 정의
 
 
-def calculate_text_position(x, y, cell_width, cell_height, text_width, text_height, position):
+
+
+def calculate_text_position(x: int, y: int, cell_width: int, cell_height: int, 
+                            text_width: int, text_height: int, position: str) -> Tuple[int, int]:
     if position == 'center':
         return (x + (cell_width - text_width) // 2, y + (cell_height - text_height) // 2)
     elif position == 'top_left':
@@ -38,65 +24,62 @@ def calculate_text_position(x, y, cell_width, cell_height, text_width, text_heig
         return (x + cell_width - text_width, y + cell_height - text_height)
     else:
         return (x + (cell_width - text_width) // 2, y + (cell_height - text_height) // 2)
-    
-def adjust_font_size(draw, text, font, max_width, max_height):
-    while font.size > 8:
+   
+def adjust_font_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, 
+                     max_width: int, max_height: int) -> ImageFont.FreeTypeFont:
+    while font.size > MIN_FONT_SIZE:
         bbox = draw.multiline_textbbox((0, 0), text, font=font)
         if bbox[2] - bbox[0] <= max_width and bbox[3] - bbox[1] <= max_height:
             break
         font = ImageFont.truetype(font.path, font.size - 1)
     return font
-def add_text_to_cell(draw, cell, font_path, text_color, position):
-    cell_width, cell_height = cell[2] - cell[0], cell[3] - cell[1]
-    padding = 2
-    
-    if cell_width < 20 or cell_height < 20:
+def add_text_to_cell(draw: ImageDraw.ImageDraw, cell: Dict[str, Any], font_path: str, 
+                     text_color: Tuple[int, int, int], position: str) -> str:
+    cell_width = cell['x2'] - cell['x1']
+    cell_height = cell['y2'] - cell['y1']
+    is_header = cell['is_header']
+    if cell_width < MIN_CELL_SIZE_FOR_TEXT or cell_height < MIN_CELL_SIZE_FOR_TEXT:
         return ""
 
-    max_font_size = min(int(cell_height * 0.4), int(cell_width * 0.2))
+    max_font_size = min(int(cell_height * 0.6), int(cell_width * 0.3)) if is_header else min(int(cell_height * 0.4), int(cell_width * 0.2))
     font_size = max_font_size
-    max_text_length = max(1, min(5, cell_width // (font_size // 2)))
-    text = random_text(min_length=1, max_length=max_text_length)
     
-    # 텍스트가 셀에 맞을 때까지 폰트 크기 조정
-    while font_size > 8:  # 최소 폰트 크기 설정
-        font = ImageFont.truetype(font_path, font_size)
-        lines = wrap_text(text, font, cell_width - 2*padding)
-        text_bbox = draw.multiline_textbbox((0, 0), lines, font=font)
+    if is_header:
+        text = str(random.randint(1, 100))  # 헤더 셀의 경우 1부터 100 사이의 숫자
+    else:
+        max_text_length = max(1, min(5, cell_width // (font_size // 2)))
+        text = random_text(min_length=1, max_length=max_text_length)
+    
+    try:
+        font = adjust_font_size(draw, text, ImageFont.truetype(font_path, font_size), cell_width - 2*PADDING, cell_height - 2*PADDING)
+        
+        if font.size <= MIN_FONT_SIZE:
+            return ""
+        
+        # 텍스트 위치 랜덤 선택
+        
+        text_bbox = draw.multiline_textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
         
-        if text_width <= cell_width - 2*padding and text_height <= cell_height - 2*padding:
-            break
-        font_size -= 1
-    
-    if font_size <= 8:  # 텍스트가 너무 길어서 맞지 않는 경우
-        return ""  # 텍스트를 그리지 않음
-    
-    start_x, start_y = calculate_text_position(
-        cell[0]+padding, cell[1]+padding, 
-        cell_width-2*padding, cell_height-2*padding, 
-        text_width, text_height, position
-    )
-    
-    # 텍스트가 셀 경계를 넘지 않도록 보정
-    start_x = max(cell[0] + padding, min(start_x, cell[2] - text_width - padding))
-    start_y = max(cell[1] + padding, min(start_y, cell[3] - text_height - padding))
-    
-    draw.multiline_text((start_x, start_y), lines, font=font, fill=text_color, align='center')
-    
-    return text
+        start_x, start_y = calculate_text_position(
+            cell['x1']+PADDING, cell['y1']+PADDING, 
+            cell_width-2*PADDING, cell_height-2*PADDING, 
+            text_width, text_height, position
+        )
+        
+        draw.text((start_x, start_y), text, font=font, fill=text_color)
+        
+        return text
+    except Exception as e:
+        table_logger.error(f"Error adding text to cell: {e}")
+        return ""
 
 
 
-def add_text_to_image(img, text, position, font_path, font_size, text_color):
-    draw = ImageDraw.Draw(img)
-    
-    # 폰트 로드
-    font = ImageFont.truetype(font_path, font_size)
-    
-    # PIL 이미지에 텍스트 추가
-    draw.text(position, text, font=font, fill=text_color)
-    
-    return img
-
+def get_text_color(bg_color: Tuple[int, int, int]) -> Tuple[int, int, int]:
+    brightness = (bg_color[0] * 299 + bg_color[1] * 587 + bg_color[2] * 114) / 1000
+    if brightness > 128:
+        return (max(0, bg_color[0] - 100), max(0, bg_color[1] - 100), max(0, bg_color[2] - 100))
+    else:
+        return (min(255, bg_color[0] + 100), min(255, bg_color[1] + 100), min(255, bg_color[2] + 100))

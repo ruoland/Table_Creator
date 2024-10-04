@@ -1,334 +1,211 @@
-from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
-
+from PIL import ImageDraw, Image
 import cv2
-
-import numpy as np
 import random
+from typing import Tuple, List, Optional
 from dataset_utils import *
 from dataset_constant import *
-import logging
-from dataset_config import config
-from dataset_draw_text import add_text_to_cell
-from PIL import ImageFont, ImageDraw, ImageFilter
+from dataset_config import TableGenerationConfig
+from dataset_draw_content import add_content_to_cells, add_shapes, add_title_to_image, apply_imperfections
+from table_generation import create_table
+from dataset_draw_cell import draw_cell, draw_outer_border, redraw_cell_with_overflow, draw_divider_lines
+from dataset_draw_preprocess import apply_realistic_effects
+from table_generation import generate_coco_annotations
+from logging_config import  get_memory_handler, table_logger
+import traceback
+import traceback
 
-# 로깅 설정
+def log_trace():
+    stack = traceback.extract_stack()
+    table_logger.debug("Current call stack:")
+    for filename, lineno, name, line in stack[:-1]:  # 마지막 항목(현재 함수)은 제외
+        table_logger.debug(f"  File {filename}, line {lineno}, in {name}")
+        if line:
+            table_logger.debug(f"    {line.strip()}")
 
-def draw_cell_line(draw, start, end, color, thickness, is_imperfect):
-    x1, y1 = start
-    x2, y2 = end
-    
+def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, is_imperfect=False, config:TableGenerationConfig=None):
+    log_trace()
+    table_logger.debug(f"generate_image_and_labels 시작: 이미지 ID {image_id}")
     try:
-        draw.line([start, end], fill=color, width=thickness)
+        image_width, image_height = resolution
         
+        bg_color = config.background_colors['light']['white'] if bg_mode == 'light' else config.background_colors['dark']['black']
+        
+        img = Image.new('RGB', (image_width, image_height), color=bg_color)
+        
+        if config.enable_title:
+            title_height = add_title_to_image(img, image_width, image_height, margins[1], bg_color)
+        else:
+            title_height = 0
+        
+        cells, table_bbox = create_table(image_width, image_height, margins, title_height, config=config)
+        
+        if config.enable_shapes:
+            max_height = max(title_height, table_bbox[1])
+            add_shapes(img, 0, title_height, image_width, max_height, bg_color)
+        validate_cell_structure(cells, "테이블 생성 후")
+        
+        draw = ImageDraw.Draw(img)
+        draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect, config)
+        validate_cell_structure(cells, "셀에 콘텐츠 추가 후")
+        
+        if config.enable_text_generation or config.enable_shapes:
+            add_content_to_cells(img, cells, random.choice(config.fonts), bg_color)
+
         if is_imperfect:
-            if random.random() < 0.2:
-                mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
-                protrusion_thickness = random.randint(1, 5)
-                protrusion_length = random.randint(1, 3)
-                
-                protrusion_color = validate_color(color)
-                
-                if x1 == x2:
-                    draw.line([(mid_x, mid_y), (mid_x + protrusion_length, mid_y)], 
-                              fill=protrusion_color, width=protrusion_thickness)
-                else:
-                    draw.line([(mid_x, mid_y), (mid_x, mid_y + protrusion_length)], 
-                              fill=protrusion_color, width=protrusion_thickness)
+            img = apply_imperfections(img, cells)
+            validate_cell_structure(cells, "불완전성 적용 후")
+        img, cells, table_bbox, transform_matrix, new_width, new_height = apply_realistic_effects(img, cells, table_bbox, title_height, config)
+        validate_cell_structure(cells, "현실적 효과 적용 후")
+        if config.enable_table_cropping and random.random() < config.table_crop_probability:
+            img, cells, table_bbox = apply_table_cropping(img, cells, table_bbox, config.max_crop_ratio)
             
-            if random.random() < 0.2:
-                num_dots = random.randint(1, 3)
-                for _ in range(num_dots):
-                    dot_x = random.randint(min(x1, x2), max(x1, x2))
-                    dot_y = random.randint(min(y1, y2), max(y1, y2))
-                    dot_size = random.randint(1, 2)
-                    draw.ellipse([(dot_x-dot_size, dot_y-dot_size), 
-                                  (dot_x+dot_size, dot_y+dot_size)], 
-                                 fill=color)
+            new_width, new_height = img.size
+
+        coco_annotations = generate_coco_annotations(cells, table_bbox, image_id, config)
+        
+        return img, coco_annotations, new_width, new_height
     except Exception as e:
-        logger.error(f"Error drawing cell line: {e}")
+        table_logger.error(f"Error generating image {image_id}: {str(e)}")
+        table_logger.error(f"info: Error occurred in generate_image_and_labels - {str(e)}")
+        import traceback
+        table_logger.error(traceback.format_exc())
+        return None, None, None, None
+def validate_cell_structure(cells, stage):
+    log_trace()
+    row_ids = sorted(set(cell['row'] for cell in cells))
+    col_ids = sorted(set(cell['col'] for cell in cells))
+    table_logger.info(f"{stage} - 현재 셀 행 ID: {row_ids}")
+    table_logger.info(f"{stage} - 현재 셀 열 ID: {col_ids}")
+    table_logger.info(f"{stage} - 총 셀 수: {len(cells)}")
+# 각 주요 단계 후에 호출
 
-def draw_cell_lines(draw, cell, line_color, line_thickness, is_merged, has_gap):
-    draw.line([(cell[0], cell[1]), (cell[2], cell[1])], fill=line_color, width=line_thickness)
-    draw.line([(cell[0], cell[3]), (cell[2], cell[3])], fill=line_color, width=line_thickness)
-    
-    if is_merged or has_gap:
-        draw.line([(cell[0], cell[1]), (cell[0], cell[3])], fill=line_color, width=line_thickness)
-        draw.line([(cell[2], cell[1]), (cell[2], cell[3])], fill=line_color, width=line_thickness)
-    else:
-        sides_to_draw = random.sample([(cell[0], cell[1], cell[0], cell[3]), 
-                                       (cell[2], cell[1], cell[2], cell[3])], 
-                                      random.randint(1, 2))
-        for side in sides_to_draw:
-            draw.line([(side[0], side[1]), (side[2], side[3])], fill=line_color, width=line_thickness)
 
-def apply_imperfections(img, cells):
-    if not config.enable_imperfections:
-        return img
-
+def apply_table_cropping(img, cells, table_bbox, max_crop_ratio):
+    log_trace()
     width, height = img.size
-    draw = ImageDraw.Draw(img)
+    crop_direction = random.choice(['left', 'right', 'top', 'bottom'])
+    crop_amount = int(random.uniform(0, max_crop_ratio) * min(width, height))
 
-    if random.random() < 0.3:
-        img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.3, 0.7)))
+    if crop_direction == 'left':
+        new_img = img.crop((crop_amount, 0, width, height))
+        cells = [{**c, 'x1': max(0, c['x1'] - crop_amount), 'x2': max(0, c['x2'] - crop_amount)} for c in cells]
+        table_bbox = [max(0, table_bbox[0] - crop_amount), table_bbox[1], table_bbox[2] - crop_amount, table_bbox[3]]
+    elif crop_direction == 'right':
+        new_img = img.crop((0, 0, width - crop_amount, height))
+        cells = [{**c, 'x2': min(width - crop_amount, c['x2'])} for c in cells]
+        table_bbox = [table_bbox[0], table_bbox[1], min(width - crop_amount, table_bbox[2]), table_bbox[3]]
+    elif crop_direction == 'top':
+        new_img = img.crop((0, crop_amount, width, height))
+        cells = [{**c, 'y1': max(0, c['y1'] - crop_amount), 'y2': max(0, c['y2'] - crop_amount)} for c in cells]
+        table_bbox = [table_bbox[0], max(0, table_bbox[1] - crop_amount), table_bbox[2], table_bbox[3] - crop_amount]
+    else:  # bottom
+        new_img = img.crop((0, 0, width, height - crop_amount))
+        cells = [{**c, 'y2': min(height - crop_amount, c['y2'])} for c in cells]
+        table_bbox = [table_bbox[0], table_bbox[1], table_bbox[2], min(height - crop_amount, table_bbox[3])]
+
+    # 유효하지 않은 셀 제거
+    cells = [cell for cell in cells if cell['x2'] > cell['x1'] and cell['y2'] > cell['y1']]
+
+    return new_img, cells, table_bbox
+
+def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int], 
+               bg_color: Tuple[int, int, int], has_gap: bool, is_imperfect: bool, config: TableGenerationConfig) -> None:
+    log_trace()
+    line_color = get_line_color(bg_color, config)
+    line_thickness = config.get_random_line_thickness()
     
-    if random.random() < 0.3:
-        for _ in range(random.randint(1, 3)):
-            x1, y1 = random.randint(0, width-1), random.randint(0, height-1)
-            x2, y2 = random.randint(0, width-1), random.randint(0, height-1)
-            
-            gap_start = random.uniform(0.1, 1.0)
-            gap_end = min(gap_start + random.uniform(0.1, 0.6), 1.0)
-            
-            draw.line([(x1, y1), 
-                       (int(x1 + (x2-x1)*gap_start), int(y1 + (y2-y1)*gap_start))], 
-                      fill=(255, 255, 255), width=1)
-            draw.line([(int(x1 + (x2-x1)*gap_end), int(y1 + (y2-y1)*gap_end)), 
-                       (x2, y2)], 
-                      fill=(255, 255, 255), width=1)
-    
+    # 테이블 경계 그리기
+    if config.enable_rounded_corners and random.random() < config.rounded_corner_probability:
+        corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
+        draw.rounded_rectangle(table_bbox, radius=corner_radius, outline=line_color, width=line_thickness)
+    else:
+        draw.rectangle(table_bbox, outline=line_color, width=line_thickness)
+
+    # 여기에 그룹 헤더 및 셀 그리기 코드를 넣습니다
+    # 그룹 헤더 추가
+    if config.enable_group_headers and random.random() < config.group_header_probability:
+        cells = add_group_headers(cells, config)
+# 모든 셀 그리기
     for cell in cells:
-        if random.random() < 0.1:
-            x1, y1, x2, y2 = map(int, cell[:4])
-            if x2 > x1 and y2 > y1:
-                start_x = random.randint(x1, max(x1, x2-1))
-                start_y = random.randint(y1, max(y1, y2-1))
-                end_x = random.randint(start_x, x2)
-                end_y = random.randint(start_y, y2)
-                draw.line([(start_x, start_y), (end_x, end_y)], fill=(0, 0, 0), width=random.randint(1, 3))
-    
-    return img
-
-
-def draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect):
-    line_color = get_line_color(bg_color)
-    header_color = get_header_color(bg_color)
-    
-    for cell in cells:
-        if not validate_cell(cell):
-            logger.warning(f"Invalid cell: {cell}")
+        if not strict_validate_cell(cell):
+            table_logger.warning(f"Invalid cell: {cell}")
             continue
         
-        # 테이블 경계 내에 있도록 셀 좌표 조정
-        x1, y1, x2, y2 = max(cell[0], table_bbox[0]), max(cell[1], table_bbox[1]), \
-                         min(cell[2], table_bbox[2]), min(cell[3], table_bbox[3])
+        is_header = cell['is_header']
+        is_group_header = cell.get('is_group_header', False)
         
-        if x2 <= x1 or y2 <= y1:
-            logger.warning(f"Cell outside table boundaries: {cell}")
-            continue
         
-        is_header = cell[7] if len(cell) > 7 else False
-        cell_color = header_color if is_header else line_color
-        is_overflow = len(cell) > 8 and cell[3] > cell[8]
+        cell_color = line_color  # 테두리 색상
         
+        if is_group_header:
+            cell_bg_color = config.get_group_header_color(bg_color)
+        elif config.enable_colored_cells and not is_header:
+            cell_bg_color = config.get_random_pastel_color(bg_color) or bg_color
+        elif config.enable_gray_cells:
+            cell_bg_color = config.get_random_gray_color() or bg_color
+        else:
+            cell_bg_color = bg_color
+
         try:
-            draw_cell(draw, [x1, y1, x2, y2] + cell[4:], cell_color, is_header, has_gap, is_imperfect, is_overflow, table_bbox, bg_color)
+
+            draw_cell(draw, cell, cell_color, is_header or is_group_header, has_gap, is_imperfect, table_bbox, cell_bg_color, config)
         except Exception as e:
-            logger.error(f"Error drawing cell {cell}: {str(e)}")
+            table_logger.error(f"Error drawing cell {cell}: {str(e)}")
+            table_logger.error(f"Traceback:\n{traceback.format_exc()}")
+
+    # 오버플로우된 셀 다시 그리기
+    for cell in cells:
+        if cell.get('overflow'):
+            try:
+                redraw_cell_with_overflow(draw, cell, line_color, is_header, has_gap, is_imperfect, table_bbox, cell_bg_color, config)
+            except Exception as e:
+                table_logger.error(f"Error redrawing cell with overflow {cell}: {str(e)}")
     
     if config.enable_outer_border:
         draw_outer_border(draw, table_bbox, line_color)
-def draw_cell(draw, cell, color, is_header, has_gap, is_imperfect, is_overflow, table_bbox, bg_color):
-    x1, y1, x2, y2 = cell[:4]
-    original_y2 = cell[8] if len(cell) > 8 else y2
-    
-    x1, x2 = min(x1, x2), max(x1, x2)
-    y1, y2 = min(y1, y2), max(y1, y2)
-    
-    x1, y1 = max(x1, table_bbox[0]), max(y1, table_bbox[1])
-    x2, y2 = min(x2, table_bbox[2]), min(y2, table_bbox[3])
-    
-    if x2 <= x1 or y2 <= y1:
-        logger.warning(f"Cell outside table boundaries: {cell}")
-        return
-    
-    draw.rectangle([x1, y1, x2, y2], fill=bg_color)
-    
-    if is_overflow:
-        draw.rectangle([x1, y1, x2, y2], outline=color)
-        overflow_line_y = min(original_y2, table_bbox[3])
-        if overflow_line_y > y1:
-            draw.line([x1, overflow_line_y, x2, overflow_line_y], fill=color, width=1)
-    else:
-        if config.enable_cell_border or has_gap:
-            draw.rectangle([x1, y1, x2, y2], outline=color)
-        else:
-            draw.line([x1, y1, x2, y1], fill=color)
-            draw.line([x1, y2, x2, y2], fill=color)
-    
-    draw.line([x1, y1, x1, y2], fill=color)
-    draw.line([x2, y1, x2, y2], fill=color)
 
-    if is_imperfect:
-        apply_cell_imperfections(draw, x1, y1, x2, y2, color)
+    # 구분선 그리기
+    if config.enable_divider_lines:
+        draw_divider_lines(draw, cells, table_bbox, line_color, config)
+def add_group_headers(cells: List[dict], config: TableGenerationConfig) -> List[dict]:
+    if not cells or random.random() >= config.group_header_probability:
+        return cells
 
-
-def apply_cell_imperfections(draw, x1, y1, x2, y2, color):
-    if random.random() < 0.2:
-        mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
-        protrusion_thickness = random.randint(1, 3)
-        protrusion_length = random.randint(1, 2)
-        
-        if random.choice([True, False]):
-            draw.line([(mid_x, y1), (mid_x, y1 - protrusion_length)], fill=color, width=protrusion_thickness)
-        else:
-            draw.line([(x1, mid_y), (x1 - protrusion_length, mid_y)], fill=color, width=protrusion_thickness)
-def get_merged_cells(cells):
-    merged_cells = set()
-    for cell in cells:
-        if len(cell) > 6 and cell[6]:
-            for r in range(cell[7], cell[9] + 1):
-                for c in range(cell[8], cell[10] + 1):
-                    merged_cells.add((r, c))
-    return merged_cells
-
-def draw_outer_border(draw, table_bbox, line_color):
-    if random.random() > 0.2:
-        outer_line_thickness = random.randint(1, 3)
-        draw.rectangle(table_bbox, outline=line_color, width=outer_line_thickness)
-
-def get_overflow_color(base_color):
-    # 기본 색상을 기반으로 오버플로우 색상 생성 (약간 더 밝게)
-    r, g, b = base_color
-    return (min(r + 30, 255), min(g + 30, 255), min(b + 30, 255))
-def draw_overflow(draw, cell, original_x2, original_y2, color):
-    x1, y1, x2, y2 = map(int, cell[:4])
-    dash_length = 5
-    space_length = 5
+    max_row = max(cell['row'] for cell in cells)
+    max_col = max(cell['col'] for cell in cells)
     
-    if x2 > original_x2:
-        for x in range(int(original_x2), x2, dash_length + space_length):
-            draw.line([(x, y1), (min(x + dash_length, x2), y1)], fill=color, width=1)
-            draw.line([(x, y2), (min(x + dash_length, x2), y2)], fill=color, width=1)
+    new_cells = []
+    group_interval = config.group_header_interval
     
-    if y2 > original_y2:
-        for y in range(int(original_y2), y2, dash_length + space_length):
-            draw.line([(x1, y), (x1, min(y + dash_length, y2))], fill=color, width=1)
-            draw.line([(x2, y), (x2, min(y + dash_length, y2))], fill=color, width=1)
-
-def get_header_color(bg_color):
-    return (0, 0, 0) if sum(bg_color) > 382 else (255, 255, 255)
-
-def apply_imperfections(img, cells):
-    if not config.enable_imperfect_lines:
-        return img
-
-    width, height = img.size
-    draw = ImageDraw.Draw(img)
-
-    if random.random() < 0.3:
-        img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.3, 0.7)))
-    
-    if random.random() < 0.3:
-        for _ in range(random.randint(1, 3)):
-            x1, y1 = random.randint(0, width-1), random.randint(0, height-1)
-            x2, y2 = random.randint(0, width-1), random.randint(0, height-1)
+    for i in range(max_row + 1):
+        if i > 0 and i % group_interval == 0:
+            # 부분 그룹 헤더 생성
+            start_col = random.randint(0, max_col - 2)  # 시작 열 랜덤 선택
+            colspan = random.randint(2, min(4, max_col - start_col))  # 그룹 헤더 폭 랜덤 선택
             
-            gap_start = random.uniform(0.1, 1.0)
-            gap_end = min(gap_start + random.uniform(0.1, 0.6), 1.0)
+            group_header = {
+                'row': i,
+                'col': start_col,
+                'rowspan': 1,
+                'colspan': colspan,
+                'is_header': True,
+                'is_group_header': True,
+                'group_type': 'partial',
+                'x1': min(cell['x1'] for cell in cells if cell['row'] == i and cell['col'] == start_col),
+                'x2': max(cell['x2'] for cell in cells if cell['row'] == i and cell['col'] == start_col + colspan - 1),
+                'y1': min(cell['y1'] for cell in cells if cell['row'] == i),
+                'y2': min(cell['y1'] for cell in cells if cell['row'] == i) + config.group_header_height
+            }
+            new_cells.append(group_header)
             
-            draw.line([(x1, y1), 
-                       (int(x1 + (x2-x1)*gap_start), int(y1 + (y2-y1)*gap_start))], 
-                      fill=(255, 255, 255), width=1)
-            draw.line([(int(x1 + (x2-x1)*gap_end), int(y1 + (y2-y1)*gap_end)), 
-                       (x2, y2)], 
-                      fill=(255, 255, 255), width=1)
-    
-    for cell in cells:
-        if random.random() < 0.1:
-            x1, y1, x2, y2 = map(int, cell[:4])
-            if x2 > x1 and y2 > y1:
-                start_x = random.randint(x1, max(x1, x2-1))
-                start_y = random.randint(y1, max(y1, y2-1))
-                end_x = random.randint(start_x, x2)
-                end_y = random.randint(start_y, y2)
-                draw.line([(start_x, start_y), (end_x, end_y)], fill=(0, 0, 0), width=random.randint(1, 3))
-    
-    return img
-def add_shapes(img, x, y, width, height, bg_color, num_shapes=None, size_range=None):
-    draw = ImageDraw.Draw(img)  # ImageDraw 객체 생성
-    shape_color = get_line_color(bg_color)
-    num_shapes = num_shapes if num_shapes is not None else random.randint(2, 8)
-    size_range = size_range or (MIN_SHAPE_SIZE, MAX_SHAPE_SIZE)
-    
-    max_y = y
-    for _ in range(num_shapes):
-        shape_type = random.choice(SHAPE_TYPES)
-        size = random.randint(*size_range)
-        shape_x = random.randint(x, max(x, x + width - size))
-        shape_y = random.randint(y, max(y, y + height - size))
+            # 기존 셀들의 row 값과 y 좌표 조정
+            for cell in cells:
+                if cell['row'] >= i:
+                    cell['row'] += 1
+                    cell['y1'] += config.group_header_height
+                    cell['y2'] += config.group_header_height
         
-        draw_shape(draw, shape_type, size, shape_x, shape_y, shape_color)
-        max_y = max(max_y, shape_y + size)
-
-    return max_y - y + random.randint(10, 30)
-
-def draw_shape(draw, shape_type, size, x, y, color):
-    try:
-        if shape_type == 'rectangle':
-            draw.rectangle([x, y, x + size, y + size], outline=color, width=2)
-        elif shape_type == 'circle':
-            draw.ellipse([x, y, x + size, y + size], outline=color, width=2)
-        elif shape_type == 'triangle':
-            draw.polygon([(x, y + size), (x + size, y + size), (x + size // 2, y)], outline=color, width=2)
-        elif shape_type == 'line':
-            draw.line([(x, y), (x + size, y + size)], fill=color, width=2)
-        elif shape_type == 'arc':
-            draw.arc([x, y, x + size, y + size], 0, 270, fill=color, width=2)
-        elif shape_type == 'polygon':
-            pts = [(random.randint(x, x + size), random.randint(y, y + size)) for _ in range(5)]
-            draw.polygon(pts, outline=color, width=2)
-    except Exception as e:
-        logger.error(f"Error drawing shape: {e}")
-
-def add_title_and_shapes(draw, image_width, image_height, margin_top, bg_color):
-    title_height = add_title_to_image(draw, image_width, margin_top, bg_color)
-    shapes_height = add_shapes(draw, image_width, image_height, title_height, bg_color)
-    return title_height + shapes_height
-def add_content_to_cells(img, cells, font_path, bg_color, empty_cell_ratio=EMPTY_CELL_RATIO):
-    for cell in cells:
-        if random.random() < empty_cell_ratio:
-            continue
-        
-        cell_width, cell_height = int(cell[2] - cell[0]), int(cell[3] - cell[1])
-        if cell_width < MIN_CELL_SIZE_FOR_CONTENT or cell_height < MIN_CELL_SIZE_FOR_CONTENT:
-            continue
-
-        content_type = random.choice(CELL_CONTENT_TYPES)
-        position = random.choice(TEXT_POSITIONS)
-        content_color = get_line_color(bg_color)
-        
-        if config.enable_text_generation and content_type in ['text', 'mixed']:
-            add_text_to_cell(ImageDraw.Draw(img), cell, font_path, content_color, position)
-        
-        if config.enable_shapes and content_type in ['shapes', 'mixed']:
-            add_shapes(img, cell[0], cell[1], cell_width, cell_height, bg_color, num_shapes=random.randint(1, 2), size_range=(5, min(cell_width, cell_height) // 3))            
-def add_title_to_image(img, image_width, image_height, margin_top, bg_color):
-    if not config.enable_title:
-        return 0
-
-    bg_color = validate_color(bg_color)
-    title = generate_random_title()
+        # 현재 행의 셀들 추가
+        new_cells.extend([cell for cell in cells if cell['row'] == i])
     
-    font_size = max(MIN_TITLE_SIZE, min(random.randint(int(image_width * 0.02), int(image_width * 0.1)), MAX_TITLE_SIZE))
-    font = ImageFont.truetype(random.choice(FONTS), font_size)
-    
-    draw = ImageDraw.Draw(img)
-    left, top, right, bottom = draw.textbbox((0, 0), title, font=font)
-    text_width, text_height = right - left, bottom - top
-    
-    if text_width > image_width * 0.9:
-        words = title.split()
-        half = len(words) // 2
-        title = ' '.join(words[:half]) + '\n' + ' '.join(words[half:])
-        left, top, right, bottom = draw.textbbox((0, 0), title, font=font)
-        text_width, text_height = right - left, bottom - top
-    
-    x = (image_width - text_width) // 2
-    y = margin_top + random.randint(5, 20)
-    text_color = get_line_color(bg_color)
-    
-    draw.text((x, y), title, font=font, fill=text_color)
-
-    return y + text_height
-
-
+    return new_cells

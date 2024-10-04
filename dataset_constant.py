@@ -1,39 +1,5 @@
 import  random
 
-# 테이블 구조 관련 상수
-MIN_COLS, MAX_COLS = 2, 15
-MIN_ROWS, MAX_ROWS = 2, 15
-MIN_CELL_WIDTH, MAX_CELL_WIDTH = 30, 300
-MIN_CELL_HEIGHT, MAX_CELL_HEIGHT = 20, 200
-
-# 이미지 크기 관련 상수
-MIN_IMAGE_WIDTH, MAX_IMAGE_WIDTH = 800, 1600
-MIN_IMAGE_HEIGHT, MAX_IMAGE_HEIGHT = 600, 1700
-
-# 여백 및 제목 관련 상수
-MIN_MARGIN, MAX_MARGIN = 10, 50
-MIN_TITLE_SIZE, MAX_TITLE_SIZE = 20, 40
-# 스타일 관련 상수
-STYLES = ['thin', 'medium', 'thick', 'double']
-FONTS = ['fonts/NanumGothic.ttf', 'fonts/SANGJU Dajungdagam.ttf', 'fonts/SOYO Maple Regular.ttf']
-LINE_STYLES = ['solid', 'dashed', 'dotted']
-
-# 색상 관련 상수
-BACKGROUND_COLORS = {
-    'light': {'white': (255, 255, 255)},
-    'dark': {'black': (0, 0, 0)}
-}
-# dataset_constant.py에 추가
-SHAPE_TYPES = ['rectangle', 'circle', 'triangle', 'line', 'arc', 'polygon']
-CELL_CONTENT_TYPES = ['text', 'shapes', 'mixed']
-TEXT_POSITIONS = ['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
-MIN_SHAPE_SIZE = 10
-MAX_SHAPE_SIZE = 50
-MIN_CELL_SIZE_FOR_CONTENT = 20
-# 생성 비율 관련 상수
-MERGED_CELL_RATIO = 0.4
-SHAPE_GENERATION_RATIO = 0.2
-EMPTY_CELL_RATIO = 0.0
 COMMON_WORDS = ['Hello', 'Table', 'Data', 'Analysis', 'Information',
     'Computer', 'AI', 'Machine', 'Deep Learning', 'Big Data',
     'Progrng', 'Algorithm', 'Network', 'Database', 'Security',

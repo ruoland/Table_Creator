@@ -54,25 +54,7 @@ def add_random_lines(draw: ImageDraw.Draw, width: int, height: int) -> None:
             draw.line([(int(x1 + (x2-x1)*gap_end), int(y1 + (y2-y1)*gap_end)), 
                        (x2, y2)], 
                       fill=(255, 255, 255), width=1)
-def add_shapes(img: Image.Image, x: int, y: int, width: int, height: int, 
-               bg_color: Tuple[int, int, int], num_shapes: Optional[int] = None, 
-               size_range: Optional[Tuple[int, int]] = None) -> int:
-    draw = ImageDraw.Draw(img)
-    shape_color = get_line_color(bg_color, config)
-    num_shapes = num_shapes if num_shapes is not None else random.randint(config.min_shapes, config.max_shapes)
-    size_range = size_range or (config.min_shape_size, config.max_shape_size)
-    
-    max_y = y
-    for _ in range(num_shapes):
-        shape_type = random.choice(config.shape_types)
-        size = random.randint(*size_range)
-        shape_x = random.randint(x, max(x, x + width - size))
-        shape_y = random.randint(y, max(y, y + height - size))
-        
-        draw_shape(draw, shape_type, size, shape_x, shape_y, shape_color)
-        max_y = max(max_y, shape_y + size)
 
-    return max_y - y + random.randint(10, 30)
 def add_shapes(img: Image.Image, x: int, y: int, width: int, height: int, 
                bg_color: Tuple[int, int, int], num_shapes: Optional[int] = None, 
                size_range: Optional[Tuple[int, int]] = None) -> int:
@@ -142,8 +124,6 @@ def add_dots(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, color: Tu
                       (dot_x+dot_size, dot_y+dot_size)], 
                      fill=color)
         
-
-
 def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str, 
                          bg_color: Tuple[int, int, int], empty_cell_ratio: float = config.empty_cell_ratio) -> None:
     draw = ImageDraw.Draw(img)
@@ -162,7 +142,9 @@ def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str,
         content_color = get_text_color(cell_bg_color)
         
         if config.enable_text_generation and content_type in ['text', 'mixed']:
-            add_text_to_cell(draw, cell, font_path, content_color, position)
+            # 'is_header' 키가 없는 경우를 처리
+            is_header = cell.get('is_header', False)
+            add_text_to_cell(draw, {**cell, 'is_header': is_header}, font_path, content_color, position)
         
         if config.enable_shapes and content_type in ['shapes', 'mixed']:
             add_shapes(img, cell['x1'], cell['y1'], cell_width, cell_height, cell_bg_color, 

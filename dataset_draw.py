@@ -7,12 +7,13 @@ from dataset_constant import *
 from dataset_config import TableGenerationConfig
 from dataset_draw_content import add_content_to_cells, add_shapes, add_title_to_image, apply_imperfections
 from table_generation import create_table
-from dataset_draw_cell import draw_cell, draw_outer_border, redraw_cell_with_overflow, draw_divider_lines
+from dataset_draw_cell import draw_cell, draw_outer_border, redraw_cell_with_overflow, draw_divider_lines, draw_rounded_rectangle
 from dataset_draw_preprocess import apply_realistic_effects
 from table_generation import generate_coco_annotations
 from logging_config import  get_memory_handler, table_logger
 import traceback
 import traceback
+
 
 def log_trace():
     stack = traceback.extract_stack()
@@ -37,17 +38,14 @@ def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, i
         else:
             title_height = 0
         
-        cells, table_bbox = create_table(image_width, image_height, margins, title_height, config=config)
-        
+        cells, table_bbox, is_table_rounded, table_corner_radius = create_table(image_width, image_height, margins, title_height, config=config)        
         if config.enable_shapes:
             max_height = max(title_height, table_bbox[1])
             add_shapes(img, 0, title_height, image_width, max_height, bg_color)
         validate_cell_structure(cells, "테이블 생성 후")
         
         draw = ImageDraw.Draw(img)
-        draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect, config)
-        validate_cell_structure(cells, "셀에 콘텐츠 추가 후")
-        
+        draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect, config, is_table_rounded, table_corner_radius)
         if config.enable_text_generation or config.enable_shapes:
             add_content_to_cells(img, cells, random.choice(config.fonts), bg_color)
 
@@ -107,25 +105,71 @@ def apply_table_cropping(img, cells, table_bbox, max_crop_ratio):
     cells = [cell for cell in cells if cell['x2'] > cell['x1'] and cell['y2'] > cell['y1']]
 
     return new_img, cells, table_bbox
+def draw_rounded_rectangle_with_selective_sides(draw, bbox, radius, color, width, draw_left, draw_right):
+    x0, y0, x1, y1 = bbox
+    # 상단 선
+    draw.line([(x0 + radius, y0), (x1 - radius, y0)], fill=color, width=width)
+    # 하단 선
+    draw.line([(x0 + radius, y1), (x1 - radius, y1)], fill=color, width=width)
+    
+    if draw_left:
+        # 좌측 선
+        draw.line([(x0, y0 + radius), (x0, y1 - radius)], fill=color, width=width)
+        # 좌상단 모서리
+        draw.arc([x0, y0, x0 + radius * 2, y0 + radius * 2], 180, 270, fill=color, width=width)
+        # 좌하단 모서리
+        draw.arc([x0, y1 - radius * 2, x0 + radius * 2, y1], 90, 180, fill=color, width=width)
+    
+    if draw_right:
+        # 우측 선
+        draw.line([(x1, y0 + radius), (x1, y1 - radius)], fill=color, width=width)
+        # 우상단 모서리
+        draw.arc([x1 - radius * 2, y0, x1, y0 + radius * 2], 270, 0, fill=color, width=width)
+        # 우하단 모서리
+        draw.arc([x1 - radius * 2, y1 - radius * 2, x1, y1], 0, 90, fill=color, width=width)
 
+def draw_rectangle_with_selective_sides(draw, bbox, color, width, draw_left, draw_right):
+    x0, y0, x1, y1 = bbox
+    # 상단 선
+    draw.line([(x0, y0), (x1, y0)], fill=color, width=width)
+    # 하단 선
+    draw.line([(x0, y1), (x1, y1)], fill=color, width=width)
+    
+    if draw_left:
+        # 좌측 선
+        draw.line([(x0, y0), (x0, y1)], fill=color, width=width)
+    
+    if draw_right:
+        # 우측 선
+        draw.line([(x1, y0), (x1, y1)], fill=color, width=width)
 def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int], 
-               bg_color: Tuple[int, int, int], has_gap: bool, is_imperfect: bool, config: TableGenerationConfig) -> None:
+               bg_color: Tuple[int, int, int], has_gap: bool, is_imperfect: bool, 
+               config: TableGenerationConfig, is_table_rounded: bool, table_corner_radius: int) -> None:
     log_trace()
     line_color = get_line_color(bg_color, config)
     line_thickness = config.get_random_line_thickness()
     
-    # 테이블 경계 그리기
-    if config.enable_rounded_corners and random.random() < config.rounded_corner_probability:
-        corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
-        draw.rounded_rectangle(table_bbox, radius=corner_radius, outline=line_color, width=line_thickness)
+    if is_table_rounded:
+        draw_rounded_rectangle(draw, table_bbox, table_corner_radius, table_bbox, outline=line_color, width=line_thickness)
     else:
         draw.rectangle(table_bbox, outline=line_color, width=line_thickness)
+    # 좌우 선을 그릴 확률 설정
+    draw_left_line = random.random() < config.table_side_line_probability
+    draw_right_line = random.random() < config.table_side_line_probability
+
+    if config.enable_rounded_corners and random.random() < config.rounded_corner_probability:
+        corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
+        # 좌우 선을 선택적으로 그리기
+        draw_rounded_rectangle_with_selective_sides(draw, table_bbox, corner_radius, line_color, line_thickness, draw_left_line, draw_right_line)
+    else:
+        # 좌우 선을 선택적으로 그리기
+        draw_rectangle_with_selective_sides(draw, table_bbox, line_color, line_thickness, draw_left_line, draw_right_line)
 
     # 여기에 그룹 헤더 및 셀 그리기 코드를 넣습니다
     # 그룹 헤더 추가
     if config.enable_group_headers and random.random() < config.group_header_probability:
         cells = add_group_headers(cells, config)
-# 모든 셀 그리기
+
     for cell in cells:
         if not strict_validate_cell(cell):
             table_logger.warning(f"Invalid cell: {cell}")

@@ -60,12 +60,12 @@ def get_line_color(bg_color: Tuple[int, int, int], config: TableGenerationConfig
         color_name = random.choices(available_colors, weights=color_weights, k=1)[0]
         line_color = config.line_colors[color_name]
     
-    return line_color
 
 def is_sufficient_contrast(bg_color: Tuple[int, int, int], line_color: Tuple[int, int, int]) -> bool:
     """배경색과 선 색상 간의 대비가 충분한지 확인합니다."""
     bg_brightness = sum(bg_color) / 3
     line_brightness = sum(line_color) / 3
+    
     return abs(bg_brightness - line_brightness) > 50  # 임계값은 조정 가능
 
 def get_contrast_color(bg_color: Tuple[int, int, int]) -> Tuple[int, int, int]:

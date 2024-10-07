@@ -94,11 +94,14 @@ def create_table(image_width, image_height, margins, title_height, config: Table
                 is_gray = random.random() < config.gray_cell_probability
 
                 # 셀 타입 결정
-                if not is_header:
-                    rand_val = random.random()
-                    cell_type = next(ct for ct, cp in zip(cell_types, cumulative_probs) if rand_val <= cp)
+                if config.enable_cell_merging:  # 셀 병합 기능이 활성화된 경우에만 다양한 셀 타입 사용
+                    if not is_header:
+                        rand_val = random.random()
+                        cell_type = next(ct for ct, cp in zip(cell_types, cumulative_probs) if rand_val <= cp)
+                    else:
+                        cell_type = 'normal_cell'  # 헤더는 항상 normal_cell로 처리
                 else:
-                    cell_type = 'normal_cell'  # 헤더는 항상 normal_cell로 처리
+                    cell_type = 'normal_cell'  # 셀 병합 기능이 비활성화된 경우 모든 셀을 normal_cell로 처리
 
                 cell = {
                     'x1': x,
@@ -107,7 +110,7 @@ def create_table(image_width, image_height, margins, title_height, config: Table
                     'y2': y + row_heights[row],
                     'row': row,
                     'col': col,
-                    'is_merged': cell_type in ['merged_cell', 'merged_overflow_cell'],
+                    'is_merged': False,  # 초기에는 모든 셀을 병합되지 않은 상태로 설정
                     'is_header': is_header,
                     'is_gray': is_gray,
                     'original_height': row_heights[row],
@@ -137,6 +140,8 @@ def create_table(image_width, image_height, margins, title_height, config: Table
 
         config.horizontal_merge_probability, config.vertical_merge_probability = adjust_probabilities(rows, cols)
 
+        is_table_rounded = config.enable_rounded_table_corners and random.random() < config.rounded_table_corner_probability
+        table_corner_radius = random.randint(config.min_table_corner_radius, config.max_table_corner_radius) if is_table_rounded else 0
         # 셀 병합 (옵션)
         if config.enable_cell_merging and len(cells) > 2:
             cells = merge_cells(cells, rows, cols, config)
@@ -177,8 +182,9 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         log_cell_coordinates(cells, "Final validation")
         config.dataset_counter.update_counts(cells)
         table_logger.debug(f"create_table 종료: 생성된 셀 수 {len(cells)}")
-        return cells, table_bbox
+        return cells, table_bbox, is_table_rounded, table_corner_radius    
     except Exception as e:
+
         table_logger.error(f"테이블 생성 중 오류 발생: {str(e)}", exc_info=True)
         raise
     finally:
@@ -306,18 +312,21 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
         }
         
         # 셀 카테고리 결정
-        if cell_info.get('is_merged') and overflow:
-            category_id = MERGED_OVERFLOW_CELL_CATEGORY_ID
-            category_name = "merged_overflow_cell"
-        elif cell_info.get('is_merged'):
-            category_id = MERGED_CELL_CATEGORY_ID
-            category_name = "merged_cell"
+        cell_type = cell_info.get('cell_type', 'normal_cell')
+        if cell_info.get('is_merged', False):
+            if overflow:
+                category_id = MERGED_OVERFLOW_CELL_CATEGORY_ID
+                category_name = "merged_overflow_cell"
+            else:
+                category_id = MERGED_CELL_CATEGORY_ID
+                category_name = "merged_cell"
         elif overflow:
             category_id = OVERFLOW_CELL_CATEGORY_ID
             category_name = "overflow_cell"
         else:
             category_id = CELL_CATEGORY_ID
-            category_name = "cell"
+        category_name = "cell"
+
 
         annotation = create_annotation(coords, category_id, category_name, attributes)
         if annotation:

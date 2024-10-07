@@ -20,55 +20,14 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
     
     table_logger.debug(f"Drawing cell: {cell}")
 
-    is_group_header = cell.get('is_group_header', False)
+    # cell_type 확인 및 로깅
+    cell_type = cell.get('cell_type', 'normal_cell')
+    table_logger.debug(f"Cell type: {cell_type}")
+
+
     is_gray = cell.get('is_gray', False)
 
-    if is_group_header:
-        if cell['group_type'] == 'partial':
-            # 부분 그룹 헤더 스타일 적용
-            cell_bg_color = (220, 220, 250)  # 연한 보라색
-            x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-            draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color, outline=line_color, width=2)
-            
-            font = ImageFont.load_default().font_variant(size=12)
-            text = f"Group {cell['row'] // config.group_header_interval}"
-            text_bbox = draw.textbbox((x1, y1), text, font=font)
-            text_position = ((x1 + x2 - text_bbox[2] + text_bbox[0]) // 2, (y1 + y2 - text_bbox[3] + text_bbox[1]) // 2)
-            draw.text(text_position, text, fill=(0, 0, 0), font=font)
-            print('중간 그룹 헤더 그리기 완료')
-
-            return cell_bg_color
-        if cell['group_type'] == 'middle':
-            # 중간 그룹 헤더 스타일 적용
-            cell_bg_color = (200, 200, 240)  # 더 진한 라벤더 색상
-            x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-            
-            # 그룹 헤더 높이 증가
-            header_height = config.group_header_height
-            y2 = y1 + header_height
-            
-            # 셀 그리기
-            draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color, outline=line_color, width=3)
-
-            # 텍스트 추가
-            font = ImageFont.load_default().font_variant(size=14)  # 더 큰 폰트 크기
-            text = f"Group {cell['row'] // config.group_header_interval}"
-            text_bbox = draw.textbbox((x1, y1), text, font=font)
-            text_position = ((x1 + x2 - text_bbox[2] + text_bbox[0]) // 2, (y1 + y2 - text_bbox[3] + text_bbox[1]) // 2)
-            draw.text(text_position, text, fill=(0, 0, 0), font=font)
-            
-            # 구분선 추가
-            draw.line([(x1, y2), (x2, y2)], fill=line_color, width=2)
-            
-            return cell_bg_color
-        elif cell['group_type'] == 'row':
-            x1, y1 = table_bbox[0] - config.group_header_offset, cell['y1']
-            x2, y2 = table_bbox[0], cell['y2']
-        else:  # column
-            x1, y1 = cell['x1'], table_bbox[1] - config.group_header_offset
-            x2, y2 = cell['x2'], table_bbox[1]
-    else:
-        x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
+    x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
 
     # 좌표 유효성 검사 및 조정
     x1, x2 = min(x1, x2), max(x1, x2)
@@ -79,11 +38,7 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
         y1 = min(y1, cell['overflow_y1'])
     if 'overflow_y2' in cell:
         y2 = max(y2, cell['overflow_y2'])
-    
-    # 테이블 경계 내로 제한 (그룹 헤더는 제외)
-    if not is_group_header:
-        x1, y1 = max(x1, table_bbox[0]), max(y1, table_bbox[1])
-        x2, y2 = min(x2, table_bbox[2]), min(y2, table_bbox[3])
+
 
     # 최소 크기 보장
     if x2 <= x1:
@@ -111,31 +66,39 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
     if draw_border:
         line_thickness = config.get_random_line_thickness()
         is_rounded = config.enable_rounded_corners and random.random() < config.rounded_corner_probability
+        is_no_side_border = random.random() < config.no_side_borders_cells_probability
 
         if is_rounded:
             corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
-            draw_rounded_rectangle(draw, [x1, y1, x2, y2], corner_radius, 
+            draw_rounded_rectangle(draw, [x1, y1, x2, y2], corner_radius, table_bbox,
                                    fill=cell_bg_color, outline=line_color, width=line_thickness)
-        elif is_imperfect or is_no_side_border_row:
-            draw_imperfect_cell_border(draw, x1, y1, x2, y2, line_color, line_thickness, config, is_no_side_border_row)
+        elif is_imperfect and is_no_side_border:
+            draw_imperfect_cell_border(draw, x1, y1, x2, y2, line_color, line_thickness, config, is_no_side_border)
         else:
+            line_thickness = 1
             draw.rectangle([x1, y1, x2, y2], outline=line_color, width=line_thickness)
 
     # 오버플로우 처리
-    if draw_border and cell.get('overflow') and not is_rounded:
-        border_width = config.min_line_thickness
-        if cell['overflow']['direction'] in ['down', 'both']:
-            draw.line([(x1, y1), (x2, y1)], fill=line_color, width=border_width)  # 위쪽
-            draw.line([(x1, y1), (x1, y2)], fill=line_color, width=border_width)  # 왼쪽
-            draw.line([(x2, y1), (x2, y2)], fill=line_color, width=border_width)  # 오른쪽
-        elif cell['overflow']['direction'] == 'up':
-            draw.line([(x1, y1), (x1, y2)], fill=line_color, width=border_width)  # 왼쪽
-            draw.line([(x2, y1), (x2, y2)], fill=line_color, width=border_width)  # 오른쪽
-            draw.line([(x1, y2), (x2, y2)], fill=line_color, width=border_width)  # 아래쪽
+    if cell.get('overflow') and config.enable_overflow:
+        overflow = cell['overflow']
+        direction = overflow['direction']
+        overflow_y1 = cell.get('overflow_y1', y1)
+        overflow_y2 = cell.get('overflow_y2', y2)
 
+        # 오버플로우 영역 그리기
+        if direction in ['up', 'both']:
+            draw.rectangle([x1, overflow_y1, x2, y1], fill=cell_bg_color)
+        if direction in ['down', 'both']:
+            draw.rectangle([x1, y2, x2, overflow_y2], fill=cell_bg_color)
+
+        # 오버플로우 테두리 그리기
+        if draw_border:
+            if is_rounded:
+                draw_rounded_overflow(draw, cell, line_color, line_thickness, corner_radius, table_bbox)
+            else:
+                draw_regular_overflow(draw, cell, line_color, line_thickness)
     table_logger.debug(f"Finished drawing cell: {cell}")
     return cell_bg_color
-
 def draw_imperfect_cell_border(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, 
                                line_color: Tuple[int, int, int], line_thickness: int, 
                                config: TableGenerationConfig, no_side_borders: bool = False):
@@ -192,22 +155,21 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
             points.append((x, y))
         draw.line(points, fill=line_color, width=line_thickness)
     
-    # 4. 색상 변화
+        # 4. 색상 변화
     if random.random() < config.color_variation_probability:
-        r, g, b = line_color
-        color_variation = random.randint(-20, 20)
-        varied_color = (max(0, min(255, r + color_variation)),
-                        max(0, min(255, g + color_variation)),
-                        max(0, min(255, b + color_variation)))
+        varied_color = apply_color_variation(line_color, line_color, config)
         draw.line([start, end], fill=varied_color, width=line_thickness)
-    
-    # 5. 선 끝부분의 불완전성
+    else:
+        draw.line([start, end], fill=line_color, width=line_thickness)
+            
     if random.random() < config.end_imperfection_probability:
         for point in [start, end]:
-            variation = random.randint(-3, 3)
-            draw.rectangle([point[0]-2, point[1]-2, point[0]+2, point[1]+2], 
-                           fill=line_color, outline=line_color)
-    
+            size = random.randint(1, 3)  # 크기 변화
+            offset_x = random.randint(-1, 1)  # x축 오프셋
+            offset_y = random.randint(-1, 1)  # y축 오프셋
+            draw.ellipse([point[0]-size+offset_x, point[1]-size+offset_y, 
+                        point[0]+size+offset_x, point[1]+size+offset_y], 
+                        fill=line_color, outline=line_color)
     # 6. 모서리 불완전성 (기존 코드)
     if random.random() < config.corner_imperfection_probability:
         corner_size = random.randint(1, 3)
@@ -216,15 +178,7 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
         else:  # 오른쪽 위 또는 오른쪽 아래 모서리
             draw.rectangle([x2-corner_size, y2-corner_size, x2+corner_size, y2+corner_size], fill=line_color)
     
-    # 7. 텍스처 효과 (기존 코드)
-    if random.random() < config.texture_effect_probability:
-        num_dots = random.randint(3, 10)
-        for _ in range(num_dots):
-            dot_x = random.randint(min(x1, x2), max(x1, x2))
-            dot_y = random.randint(min(y1, y2), max(y1, y2))
-            dot_size = random.randint(1, 2)
-            draw.ellipse([dot_x-dot_size, dot_y-dot_size, dot_x+dot_size, dot_y+dot_size], fill=line_color)
-    
+
     # 8. 선의 흐림 효과 (기존 코드)
     if random.random() < config.line_blur_probability:
         line_image = Image.new('RGBA', (max(x1, x2) - min(x1, x2) + 10, max(y1, y2) - min(y1, y2) + 10), (0, 0, 0, 0))
@@ -241,47 +195,60 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
         transparent_draw.line([(5, 5), (transparent_line.width-5, transparent_line.height-5)], 
                               fill=(r, g, b, random.randint(128, 255)), width=line_thickness)
         draw.bitmap((min(x1, x2)-5, min(y1, y2)-5), transparent_line, fill=None)
-
-def draw_rounded_rectangle(draw, xy, corner_radius, fill=None, outline=None, width=1):
-    x1, y1, x2, y2 = xy
+def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> Tuple[int, int, int]:
+    """선 색상에 변화를 주되, 배경색과의 대비를 유지합니다."""
+    r, g, b = line_color
     
-    # 좌표 유효성 검사 및 조정
-    if x1 > x2:
-        x1, x2 = x2, x1
-    if y1 > y2:
-        y1, y2 = y2, y1
+    # 각 채널별로 독립적으로 변화를 줍니다
+    varied_color = (
+        max(0, min(255, r + random.randint(-20, 20))),
+        max(0, min(255, g + random.randint(-20, 20))),
+        max(0, min(255, b + random.randint(-20, 20)))
+    )
     
-    # 최소 크기 보장
-    if x2 - x1 < 2 * corner_radius:
-        corner_radius = (x2 - x1) // 2
-    if y2 - y1 < 2 * corner_radius:
-        corner_radius = (y2 - y1) // 2
-    
-    # 각 부분 그리기
-    draw.rectangle([x1 + corner_radius, y1, x2 - corner_radius, y2], fill=fill)
-    draw.rectangle([x1, y1 + corner_radius, x2, y2 - corner_radius], fill=fill)
-    
-    # 모서리 그리기
-    draw.pieslice([x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2], 180, 270, fill=fill)
-    draw.pieslice([x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2], 270, 360, fill=fill)
-    draw.pieslice([x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2], 90, 180, fill=fill)
-    draw.pieslice([x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2], 0, 90, fill=fill)
-    
-    # 외곽선 그리기
-    if outline:
-        draw.arc([x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2], 180, 270, fill=outline, width=width)
-        draw.arc([x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2], 270, 360, fill=outline, width=width)
-        draw.arc([x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2], 90, 180, fill=outline, width=width)
-        draw.arc([x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2], 0, 90, fill=outline, width=width)
-        draw.line([x1 + corner_radius, y1, x2 - corner_radius, y1], fill=outline, width=width)
-        draw.line([x1 + corner_radius, y2, x2 - corner_radius, y2], fill=outline, width=width)
-        draw.line([x1, y1 + corner_radius, x1, y2 - corner_radius], fill=outline, width=width)
-        draw.line([x2, y1 + corner_radius, x2, y2 - corner_radius], fill=outline, width=width)
+    # 배경색과의 대비를 확인합니다
+    if is_sufficient_contrast(bg_color, varied_color):
+        return varied_color
+    else:
+        # 대비가 충분하지 않으면 원래 색상으로 돌아갑니다
+        return line_color
 
 
+def draw_rounded_overflow(draw, cell, line_color, border_width, corner_radius, table_bbox):
+    x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
+    overflow_y1 = cell.get('overflow_y1', y1)
+    overflow_y2 = cell.get('overflow_y2', y2)
+    direction = cell['overflow']['direction']
+
+    if direction in ['up', 'both']:
+        draw_rounded_rectangle(draw, [x1, overflow_y1, x2, y1], corner_radius, table_bbox, outline=line_color, width=border_width)
+    if direction in ['down', 'both']:
+        draw_rounded_rectangle(draw, [x1, y2, x2, overflow_y2], corner_radius, table_bbox, outline=line_color, width=border_width)
+
+def draw_regular_overflow(draw, cell, line_color, border_width):
+    x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
+    overflow_y1 = cell.get('overflow_y1', y1)
+    overflow_y2 = cell.get('overflow_y2', y2)
+    direction = cell['overflow']['direction']
+
+    if direction in ['up', 'both']:
+        draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=border_width)
+    if direction in ['down', 'both']:
+        draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=border_width)
+    draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=border_width)
+    draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=border_width)
 def redraw_cell_with_overflow(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int], 
                               is_header: bool, has_gap: bool, is_imperfect: bool, 
                               table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> None:
+    # cell_type 확인 및 업데이트
+    cell_type = cell.get('cell_type', 'normal_cell')
+    if cell_type == 'merged_cell':
+        cell['cell_type'] = 'merged_overflow_cell'
+    elif cell_type == 'normal_cell':
+        cell['cell_type'] = 'overflow_cell'
+
+    table_logger.debug(f"Redrawing cell with overflow. Updated cell type: {cell['cell_type']}")
+
     x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
     
     is_gray = cell.get('is_gray', True)
@@ -295,27 +262,43 @@ def redraw_cell_with_overflow(draw: ImageDraw.Draw, cell: dict, line_color: Tupl
     overflow_y1 = cell.get('overflow_y1', y1)
     overflow_y2 = cell.get('overflow_y2', y2)
     
+    # 둥근 모서리 설정
+    is_rounded = config.enable_rounded_corners and random.random() < config.rounded_corner_probability
+    corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius) if is_rounded else 0
+    
     # 셀 배경 다시 그리기 (오버플로우 영역 포함)
-    draw.rectangle([x1, overflow_y1, x2, overflow_y2], fill=cell_bg_color)
+    if is_rounded:
+        draw_rounded_rectangle(draw, [x1, overflow_y1, x2, overflow_y2], corner_radius, table_bbox,
+                               fill=cell_bg_color, outline=None)
+    else:
+        draw.rectangle([x1, overflow_y1, x2, overflow_y2], fill=cell_bg_color)
 
     # 셀 테두리 다시 그리기
     border_width = config.min_line_thickness
 
-    # 왼쪽과 오른쪽 테두리 그리기
-    draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=border_width)
-    draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=border_width)
-
-    # 위쪽 테두리 그리기
-    if direction in ['up', 'both']:
-        draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=border_width)
+    if is_rounded:
+        # 둥근 모서리로 테두리 그리기
+        draw_rounded_rectangle(draw, [x1, overflow_y1, x2, overflow_y2], corner_radius, table_bbox,
+                               outline=line_color, width=border_width)
     else:
-        draw.line([(x1, y1), (x2, y1)], fill=line_color, width=border_width)
+        # 일반 테두리 그리기
+        # 왼쪽과 오른쪽 테두리
+        draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=border_width)
+        draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=border_width)
 
-    # 아래쪽 테두리 그리기
-    if direction in ['down', 'both']:
-        draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=border_width)
-    else:
-        draw.line([(x1, y2), (x2, y2)], fill=line_color, width=border_width)
+        # 위쪽 테두리
+        if direction in ['up', 'both']:
+            draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=border_width)
+        else:
+            draw.line([(x1, y1), (x2, y1)], fill=line_color, width=border_width)
+
+        # 아래쪽 테두리
+        if direction in ['down', 'both']:
+            draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=border_width)
+        else:
+            draw.line([(x1, y2), (x2, y2)], fill=line_color, width=border_width)
+
+    table_logger.debug(f"Finished redrawing cell with overflow: {cell}")
 
 
 def draw_outer_border(draw: ImageDraw.Draw, table_bbox: List[int], line_color: Tuple[int, int, int]) -> None:
@@ -359,3 +342,59 @@ def draw_divider_lines(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List
             x = sum(cell['x2'] for cell in cells if cell['col'] == col) // len([cell for cell in cells if cell['col'] == col])
             thickness = random.randint(*config.divider_line_thickness_range)
             draw_imperfect_line(draw, (x, y1), (x, y2), line_color, thickness, config)
+
+def draw_rounded_rectangle(draw, xy, corner_radius, table_bbox, fill=None, outline=None, width=1):
+    x1, y1, x2, y2 = xy
+    table_x1, table_y1, table_x2, table_y2 = table_bbox
+    # 좌표 유효성 검사 및 조정
+    if x1 > x2:
+        x1, x2 = x2, x1
+    if y1 > y2:
+        y1, y2 = y2, y1
+    
+    # 최소 크기 보장
+    if x2 - x1 < 2 * corner_radius:
+        corner_radius = (x2 - x1) // 2
+    if y2 - y1 < 2 * corner_radius:
+        corner_radius = (y2 - y1) // 2
+    
+    # 각 부분 그리기
+    draw.rectangle([x1 + corner_radius, y1, x2 - corner_radius, y2], fill=fill)
+    draw.rectangle([x1, y1 + corner_radius, x2, y2 - corner_radius], fill=fill)
+    
+    # 모서리 그리기
+    draw.pieslice([x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2], 180, 270, fill=fill)
+    draw.pieslice([x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2], 270, 360, fill=fill)
+    draw.pieslice([x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2], 90, 180, fill=fill)
+    draw.pieslice([x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2], 0, 90, fill=fill)
+    
+    # 외곽선 그리기
+    if outline:
+        draw.arc([x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2], 180, 270, fill=outline, width=width)
+        draw.arc([x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2], 270, 360, fill=outline, width=width)
+        draw.arc([x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2], 90, 180, fill=outline, width=width)
+        draw.arc([x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2], 0, 90, fill=outline, width=width)
+        draw.line([x1 + corner_radius, y1, x2 - corner_radius, y1], fill=outline, width=width)
+        draw.line([x1 + corner_radius, y2, x2 - corner_radius, y2], fill=outline, width=width)
+        draw.line([x1, y1 + corner_radius, x1, y2 - corner_radius], fill=outline, width=width)
+        draw.line([x2, y1 + corner_radius, x2, y2 - corner_radius], fill=outline, width=width)
+    # 모서리 그리기 (오버플로우 고려)
+    if y1 >= table_y1:  # 상단 모서리
+        draw.pieslice([x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2], 180, 270, fill=fill)
+        draw.pieslice([x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2], 270, 360, fill=fill)
+    if y2 <= table_y2:  # 하단 모서리
+        draw.pieslice([x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2], 90, 180, fill=fill)
+        draw.pieslice([x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2], 0, 90, fill=fill)
+    
+    # 외곽선 그리기 (오버플로우 고려)
+    if outline:
+        if y1 >= table_y1:
+            draw.arc([x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2], 180, 270, fill=outline, width=width)
+            draw.arc([x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2], 270, 360, fill=outline, width=width)
+            draw.line([x1 + corner_radius, y1, x2 - corner_radius, y1], fill=outline, width=width)
+        if y2 <= table_y2:
+            draw.arc([x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2], 90, 180, fill=outline, width=width)
+            draw.arc([x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2], 0, 90, fill=outline, width=width)
+            draw.line([x1 + corner_radius, y2, x2 - corner_radius, y2], fill=outline, width=width)
+        draw.line([x1, y1 + corner_radius, x1, y2 - corner_radius], fill=outline, width=width)
+        draw.line([x2, y1 + corner_radius, x2, y2 - corner_radius], fill=outline, width=width)

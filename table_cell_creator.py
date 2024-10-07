@@ -59,11 +59,11 @@ def plan_cell_overflow(cells, config):
                         break
 
             # 오버플로우된 셀의 타입 업데이트
-            if not cell.get('is_merged'):
-                cell['cell_type'] = 'overflow_cell'
-            else:
-                cell['cell_type'] = 'merged_overflow_cell'
-
+            if cell.get('overflow'):
+                        if cell['cell_type'] == 'merged_cell':
+                            cell['cell_type'] = 'merged_overflow_cell'
+                        else:
+                            cell['cell_type'] = 'overflow_cell'
             overflow_count += 1
 
     table_logger.info(f"오버플로우 계획: 총 {overflow_count}개 셀에 적용")
@@ -209,34 +209,32 @@ def merge_cells(cells, rows, cols, config):
                 row += 1
 
     # 병합된 셀 정보 업데이트
+    # 병합된 셀 정보 업데이트
+    # 병합된 셀 정보 업데이트
     for area in merged_areas:
         row_start, col_start, row_end, col_end = area
         base_cell = merged_cells[row_start * cols + col_start]
         base_cell['cell_type'] = 'merged_cell'
+        base_cell['is_merged'] = True
+        base_cell['merge_rows'] = row_end - row_start
+        base_cell['merge_cols'] = col_end - col_start
+
+        # 병합된 영역의 다른 셀들 제거
         for r in range(row_start, row_end):
             for c in range(col_start, col_end):
-                if r == row_start and c == col_start:
-                    continue  # 이미 새 셀 정보로 업데이트됨
-                merged_cells[r * cols + c]['is_merged'] = True
-                merged_cells[r * cols + c]['merged_to'] = (row_start, col_start)
-                merged_cells[r * cols + c]['cell_type'] = 'merged_cell'
+                if r != row_start or c != col_start:
+                    merged_cells[r * cols + c] = None
 
-    # 병합된 셀 정보를 유지하면서 중복 제거
-    unique_cells = []
-    seen = set()
-    for cell in merged_cells:
-        key = (cell['row'], cell['col'])
-        if key not in seen:
-            seen.add(key)
-            if cell.get('is_merged') and not cell.get('merged_to'):
-                unique_cells.append(cell)
-            elif not cell.get('is_merged'):
-                unique_cells.append(cell)
+    # None이 아닌 셀만 유지
+    cells = [cell for cell in merged_cells if cell is not None]
 
-    cells = reassign_cell_ids(unique_cells)
+    # 셀 ID 재할당
+    cells = reassign_cell_ids(cells)
+
     log_cell_coordinates(cells, "End of merge_cells")
     table_logger.debug(f"merge_cells 종료: 병합된 셀 수 {len(merged_areas)}, 남은 셀 수 {len(cells)}")
     return cells
+
 
 def reassign_cell_ids(cells):
     row_map = {}
@@ -286,7 +284,8 @@ def create_merged_cell(cells, start_row, start_col, merge_rows, merge_cols, cols
         'original_height': end_cell['y2'] - base_cell['y1'],
         'overflow': None,
         'merge_rows': merge_rows,
-        'merge_cols': merge_cols
+        'merge_cols': merge_cols,
+        'cell_type': 'merged_cell',
     }
     
     # 병합된 셀의 높이와 너비 확인

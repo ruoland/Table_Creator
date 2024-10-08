@@ -82,13 +82,13 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
     if cell.get('overflow') and config.enable_overflow:
         overflow = cell['overflow']
         direction = overflow['direction']
-        overflow_y1 = cell.get('overflow_y1', y1)
-        overflow_y2 = cell.get('overflow_y2', y2)
-
+        overflow_y1 = max(table_bbox[1], cell.get('overflow_y1', y1))
+        overflow_y2 = min(table_bbox[3], cell.get('overflow_y2', y2))
+        
         # 오버플로우 영역 그리기
-        if direction in ['up', 'both']:
+        if direction in ['up', 'both'] and overflow_y1 < y1:
             draw.rectangle([x1, overflow_y1, x2, y1], fill=cell_bg_color)
-        if direction in ['down', 'both']:
+        if direction in ['down', 'both'] and overflow_y2 > y2:
             draw.rectangle([x1, y2, x2, overflow_y2], fill=cell_bg_color)
 
         # 오버플로우 테두리 그리기

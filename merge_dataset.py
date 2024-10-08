@@ -83,8 +83,8 @@ def merge_datasets(dataset1_path, dataset2_path, output_path):
         print(result)
 
 if __name__ == "__main__":
-    dataset1_path = r"C:\project\table_color_real_normal"
-    dataset2_path = r"C:\project\table_color2"
-    output_path = r"C:\project\merged_1007"
+    dataset1_path = r"C:\project\table_color2"
+    dataset2_path = r"C:\project\table_color"
+    output_path = r"C:\project\merged_1008"
     
     merge_datasets(dataset1_path, dataset2_path, output_path)

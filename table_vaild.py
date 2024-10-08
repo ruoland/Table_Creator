@@ -161,7 +161,7 @@ class COCOValidator:
                 print("올바른 이미지 ID를 입력해주세요.")
 
 if __name__ == "__main__":
-    json_file = r"C:\project\table_color2\train_annotations.json"  # JSON 파일 경로
-    image_dir = r"C:\project\table_color2\train\images"  # 이미지 디렉토리 경로
+    json_file = r"C:\project\table_color\train_annotations.json"  # JSON 파일 경로
+    image_dir = r"C:\project\table_color\train\images"  # 이미지 디렉토리 경로
     validator = COCOValidator(json_file, image_dir)
     validator.validate_dataset()

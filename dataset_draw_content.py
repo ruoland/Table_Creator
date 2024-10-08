@@ -127,6 +127,7 @@ def add_dots(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, color: Tu
 def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str, 
                          bg_color: Tuple[int, int, int], empty_cell_ratio: float = config.empty_cell_ratio) -> None:
     draw = ImageDraw.Draw(img)
+    width, height = img.size
     for cell in cells:
         if random.random() < empty_cell_ratio:
             continue
@@ -137,7 +138,14 @@ def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str,
 
         content_type = random.choice(config.cell_content_types)
         position = random.choice(config.text_positions)
+        # 좌표 유효성 검사 및 조정
+        x1 = max(0, min(cell['x1'], width - 1))
+        y1 = max(0, min(cell['y1'], height - 1))
+        x2 = max(0, min(cell['x2'], width - 1))
+        y2 = max(0, min(cell['y2'], height - 1))
         
+        if x2 <= x1 or y2 <= y1:
+            continue  # 유효하지 않은 셀 건너뛰기
         cell_bg_color = img.getpixel((cell['x1'] + 1, cell['y1'] + 1))
         content_color = get_text_color(cell_bg_color)
         

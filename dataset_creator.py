@@ -26,7 +26,7 @@ def run_dataset_generation(output_dir, num_images, imperfect_ratio, train_ratio,
         raise
 
 def main():
-    output_dir = r'C:\project\table_color'
+    output_dir = r'C:\project\table_color2'
     
     imperfect_ratio = 0.3
     train_ratio = 0.8

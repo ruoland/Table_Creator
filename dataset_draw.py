@@ -23,9 +23,11 @@ def log_trace():
         if line:
             table_logger.debug(f"    {line.strip()}")
 
+
 def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, is_imperfect=False, config:TableGenerationConfig=None):
     log_trace()
     table_logger.debug(f"generate_image_and_labels 시작: 이미지 ID {image_id}")
+    
     try:
         image_width, image_height = resolution
         
@@ -38,8 +40,9 @@ def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, i
         else:
             title_height = 0
         
-        cells, table_bbox, is_table_rounded, table_corner_radius = create_table(image_width, image_height, margins, title_height, config=config)        
-        if config.enable_shapes:
+        cells, table_bbox, is_table_rounded, table_corner_radius = create_table(image_width, image_height, margins, title_height, config=config)    
+
+        if config.enable_shapes: #도형
             max_height = max(title_height, table_bbox[1])
             add_shapes(img, 0, title_height, image_width, max_height, bg_color)
         validate_cell_structure(cells, "테이블 생성 후")
@@ -128,18 +131,18 @@ def draw_rounded_rectangle_with_selective_sides(draw, bbox, radius, color, width
         # 우하단 모서리
         draw.arc([x1 - radius * 2, y1 - radius * 2, x1, y1], 0, 90, fill=color, width=width)
 
-def draw_rectangle_with_selective_sides(draw, bbox, color, width, draw_left, draw_right):
+def draw_rectangle_with_selective_sides(draw, bbox, color, width, draw_line):
     x0, y0, x1, y1 = bbox
     # 상단 선
     draw.line([(x0, y0), (x1, y0)], fill=color, width=width)
     # 하단 선
     draw.line([(x0, y1), (x1, y1)], fill=color, width=width)
     
-    if draw_left:
+    if draw_line:
         # 좌측 선
         draw.line([(x0, y0), (x0, y1)], fill=color, width=width)
     
-    if draw_right:
+    if draw_line:
         # 우측 선
         draw.line([(x1, y0), (x1, y1)], fill=color, width=width)
 def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int], 
@@ -153,22 +156,18 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
         draw_rounded_rectangle(draw, table_bbox, table_corner_radius, table_bbox, outline=line_color, width=line_thickness)
     else:
         draw.rectangle(table_bbox, outline=line_color, width=line_thickness)
-    # 좌우 선을 그릴 확률 설정
-    draw_left_line = random.random() < config.table_side_line_probability
-    draw_right_line = random.random() < config.table_side_line_probability
+    # 표의 좌우 선을 그릴 확률 설정
+    can_draw_outer_line = random.random() < config.table_side_line_probability
+
 
     if config.enable_rounded_corners and random.random() < config.rounded_corner_probability:
         corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
         # 좌우 선을 선택적으로 그리기
-        draw_rounded_rectangle_with_selective_sides(draw, table_bbox, corner_radius, line_color, line_thickness, draw_left_line, draw_right_line)
+        draw_rounded_rectangle_with_selective_sides(draw, table_bbox, corner_radius, line_color, line_thickness, can_draw_outer_line, can_draw_outer_line)
     else:
         # 좌우 선을 선택적으로 그리기
-        draw_rectangle_with_selective_sides(draw, table_bbox, line_color, line_thickness, draw_left_line, draw_right_line)
+        draw_rectangle_with_selective_sides(draw, table_bbox, line_color, line_thickness, can_draw_outer_line)
 
-    # 여기에 그룹 헤더 및 셀 그리기 코드를 넣습니다
-    # 그룹 헤더 추가
-    if config.enable_group_headers and random.random() < config.group_header_probability:
-        cells = add_group_headers(cells, config)
 
     for cell in cells:
         if not strict_validate_cell(cell):
@@ -192,7 +191,7 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
 
         try:
 
-            draw_cell(draw, cell, cell_color, is_header or is_group_header, has_gap, is_imperfect, table_bbox, cell_bg_color, config)
+            draw_cell(draw, cell, cell_color, is_header or is_group_header, is_imperfect, table_bbox, cell_bg_color, config)
         except Exception as e:
             table_logger.error(f"Error drawing cell {cell}: {str(e)}")
             table_logger.error(f"Traceback:\n{traceback.format_exc()}")
@@ -201,7 +200,7 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
     for cell in cells:
         if cell.get('overflow'):
             try:
-                redraw_cell_with_overflow(draw, cell, line_color, is_header, has_gap, is_imperfect, table_bbox, cell_bg_color, config)
+                redraw_cell_with_overflow(draw, cell, line_color, table_bbox, cell_bg_color, config)
             except Exception as e:
                 table_logger.error(f"Error redrawing cell with overflow {cell}: {str(e)}")
     
@@ -211,45 +210,3 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
     # 구분선 그리기
     if config.enable_divider_lines:
         draw_divider_lines(draw, cells, table_bbox, line_color, config)
-def add_group_headers(cells: List[dict], config: TableGenerationConfig) -> List[dict]:
-    if not cells or random.random() >= config.group_header_probability:
-        return cells
-
-    max_row = max(cell['row'] for cell in cells)
-    max_col = max(cell['col'] for cell in cells)
-    
-    new_cells = []
-    group_interval = config.group_header_interval
-    
-    for i in range(max_row + 1):
-        if i > 0 and i % group_interval == 0:
-            # 부분 그룹 헤더 생성
-            start_col = random.randint(0, max_col - 2)  # 시작 열 랜덤 선택
-            colspan = random.randint(2, min(4, max_col - start_col))  # 그룹 헤더 폭 랜덤 선택
-            
-            group_header = {
-                'row': i,
-                'col': start_col,
-                'rowspan': 1,
-                'colspan': colspan,
-                'is_header': True,
-                'is_group_header': True,
-                'group_type': 'partial',
-                'x1': min(cell['x1'] for cell in cells if cell['row'] == i and cell['col'] == start_col),
-                'x2': max(cell['x2'] for cell in cells if cell['row'] == i and cell['col'] == start_col + colspan - 1),
-                'y1': min(cell['y1'] for cell in cells if cell['row'] == i),
-                'y2': min(cell['y1'] for cell in cells if cell['row'] == i) + config.group_header_height
-            }
-            new_cells.append(group_header)
-            
-            # 기존 셀들의 row 값과 y 좌표 조정
-            for cell in cells:
-                if cell['row'] >= i:
-                    cell['row'] += 1
-                    cell['y1'] += config.group_header_height
-                    cell['y2'] += config.group_header_height
-        
-        # 현재 행의 셀들 추가
-        new_cells.extend([cell for cell in cells if cell['row'] == i])
-    
-    return new_cells

@@ -5,11 +5,11 @@ import sys
 
 def setup_logger():
     logger = logging.getLogger('table_generator')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # 스트림 핸들러 설정 (콘솔 출력용)
     stream_handler = logging.StreamHandler(sys.stderr)
-    stream_handler.setLevel(logging.ERROR)
+    stream_handler.setLevel(logging.WARNING)
 
     # 포맷터 설정
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

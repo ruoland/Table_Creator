@@ -1,19 +1,16 @@
 import random
 import numpy as np
 import cv2
-from dataset_utils import is_overlapping, validate_cell
 from dataset_config import TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, COLUMN_CATEGORY_ID, ROW_CATEGORY_ID, MERGED_CELL_CATEGORY_ID, OVERFLOW_CELL_CATEGORY_ID, MERGED_OVERFLOW_CELL_CATEGORY_ID
 from logging_config import table_logger, get_memory_handler
 from table_cell_creator import *
-
 def create_table(image_width, image_height, margins, title_height, config: TableGenerationConfig):
-
     memory_handler = get_memory_handler()
     table_logger.addHandler(memory_handler)
     table_type = random.choices(['simple', 'medium', 'complex'], 
                                 weights=[config.simple_table_ratio, 
-                                        config.medium_table_ratio, 
-                                        config.complex_table_ratio])[0]
+                                         config.medium_table_ratio, 
+                                         config.complex_table_ratio])[0]
     try:
         table_logger.debug(f"create_table 시작: 이미지 크기 {image_width}x{image_height}")
         margin_left, margin_top, margin_right, margin_bottom = map(int, margins)
@@ -30,6 +27,7 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         elif table_type == 'complex':
             max_rows = config.max_rows_complex
             max_cols = config.max_cols_complex
+
         # 테이블 크기 계산 (갭 포함)
         table_width = max(config.min_table_width, image_width - margin_left - margin_right)
         table_height = max(config.min_table_height, image_height - margin_top - margin_bottom - title_height)
@@ -77,11 +75,6 @@ def create_table(image_width, image_height, margins, title_height, config: Table
             col_widths[i % cols] += 1
         for i in range(extra_height):
             row_heights[i % rows] += 1
-        target_ratios = config.dataset_counter.get_target_ratios()
-            # 셀 타입 결정을 위한 누적 확률 계산
-        cell_types = list(target_ratios.keys())
-        cell_probs = list(target_ratios.values())
-        cumulative_probs = [sum(cell_probs[:i+1]) for i in range(len(cell_probs))]
 
         cells = []
         y = margin_top + title_height
@@ -93,16 +86,6 @@ def create_table(image_width, image_height, margins, title_height, config: Table
                             (config.table_type in ['header_column', 'header_both'] and col == 0)
                 is_gray = random.random() < config.gray_cell_probability
 
-                # 셀 타입 결정
-                if config.enable_cell_merging:  # 셀 병합 기능이 활성화된 경우에만 다양한 셀 타입 사용
-                    if not is_header:
-                        rand_val = random.random()
-                        cell_type = next(ct for ct, cp in zip(cell_types, cumulative_probs) if rand_val <= cp)
-                    else:
-                        cell_type = 'normal_cell'  # 헤더는 항상 normal_cell로 처리
-                else:
-                    cell_type = 'normal_cell'  # 셀 병합 기능이 비활성화된 경우 모든 셀을 normal_cell로 처리
-
                 cell = {
                     'x1': x,
                     'y1': y,
@@ -110,17 +93,13 @@ def create_table(image_width, image_height, margins, title_height, config: Table
                     'y2': y + row_heights[row],
                     'row': row,
                     'col': col,
-                    'is_merged': False,  # 초기에는 모든 셀을 병합되지 않은 상태로 설정
+                    'is_merged': False,
                     'is_header': is_header,
                     'is_gray': is_gray,
                     'original_height': row_heights[row],
                     'overflow': None,
-                    'cell_type': cell_type
+                    'cell_type': 'normal_cell'
                 }
-                if cell['y1'] >= cell['y2']:
-                    table_logger.warning(f"Invalid cell coordinates detected: {cell}")
-                    cell['y2'] = cell['y1'] + 1  # 최소 1픽셀 높이 보장
-
                 cells.append(cell)
                 x += col_widths[col] + gap
             y += row_heights[row] + gap
@@ -138,10 +117,9 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         cells = validate_all_cells(cells, table_bbox, "cell creation")
         log_cell_coordinates(cells, "After initial validation")
 
-        config.horizontal_merge_probability, config.vertical_merge_probability = adjust_probabilities(rows, cols)
-
         is_table_rounded = config.enable_rounded_table_corners and random.random() < config.rounded_table_corner_probability
         table_corner_radius = random.randint(config.min_table_corner_radius, config.max_table_corner_radius) if is_table_rounded else 0
+
         # 셀 병합 (옵션)
         if config.enable_cell_merging and len(cells) > 2:
             cells = merge_cells(cells, rows, cols, config)
@@ -153,14 +131,9 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         cells = plan_cell_overflow(cells, config)
         table_logger.info(f"오버플로우 계획 후 셀 수: {len(cells)}")
         log_cell_coordinates(cells, "After overflow planning")
-        config.overflow_probability = adjust_probabilities(rows, cols)[1]
 
-        # 셀 위치 조정 전 로깅 추가
-        table_logger.info(f"셀 위치 조정 전 셀 수: {len(cells)}")
-        log_cell_coordinates(cells, "Before cell position adjustment")
-        
+        # 셀 위치 조정
         cells = adjust_cell_positions(cells, config, table_bbox)
-
         table_logger.info(f"셀 위치 조정 후 셀 수: {len(cells)}")
         log_cell_coordinates(cells, "After cell position adjustment")
             
@@ -171,12 +144,12 @@ def create_table(image_width, image_height, margins, title_height, config: Table
                 {'x1': margin_left, 'y1': margin_top + title_height, 'x2': margin_left + table_width // 2,
                     'y2': margin_top + title_height + table_height,
                     'row': 0, 'col': 0, 'is_merged': False, 'is_header': False,
-                    'original_height': table_height, 'overflow': None},
+                    'original_height': table_height, 'overflow': None, 'cell_type': 'normal_cell'},
                 {'x1': margin_left + table_width // 2, 'y1': margin_top + title_height,
                     'x2': margin_left + table_width,
                     'y2': margin_top + title_height + table_height,
                     'row': 0, 'col': 1, 'is_merged': False, 'is_header': False,
-                    'original_height': table_height, 'overflow': None}
+                    'original_height': table_height, 'overflow': None, 'cell_type': 'normal_cell'}
             ]
         cells = validate_cell_coordinates(cells, table_bbox)
         log_cell_coordinates(cells, "Final validation")
@@ -184,13 +157,13 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         table_logger.debug(f"create_table 종료: 생성된 셀 수 {len(cells)}")
         return cells, table_bbox, is_table_rounded, table_corner_radius    
     except Exception as e:
-
         table_logger.error(f"테이블 생성 중 오류 발생: {str(e)}", exc_info=True)
         raise
     finally:
         # 메모리 핸들러의 내용을 모두 출력하고 로거에서 제거
         memory_handler.close()
         table_logger.removeHandler(memory_handler)
+
 
 def validate_all_cells(cells, table_bbox, stage_name):
     for cell in cells:
@@ -237,11 +210,15 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
     cell_rows = sorted(set(cell['row'] for cell in cells))
     cell_cols = sorted(set(cell['col'] for cell in cells))
 
+    
     # 행 어노테이션 생성
     for i, row in enumerate(cell_rows):
         row_cells = [cell for cell in cells if cell['row'] == row]
+        
+        # 병합 여부와 관계없이 모든 셀의 y1, y2를 고려
         y1 = min(cell['y1'] for cell in row_cells)
-        y2 = max(cell['y2'] for cell in row_cells)
+        y2 = max(cell['y1'] + cell.get('original_height', cell['y2'] - cell['y1']) for cell in row_cells)
+        
         row_coords = [table_bbox[0], y1, table_bbox[2], y2]
         is_header = i == 0 and config.table_type in ['header_row', 'header_both']
         row_annotation = create_annotation(row_coords, ROW_CATEGORY_ID, "row", {
@@ -253,6 +230,8 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
         if row_annotation:
             coco_annotations.append(row_annotation)
             annotation_id += 1
+
+
 
     # 열 어노테이션 생성
     for i, col in enumerate(cell_cols):
@@ -271,7 +250,7 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
             coco_annotations.append(col_annotation)
             annotation_id += 1
 
-# 셀 어노테이션 생성
+    # 셀 어노테이션 생성
     for cell_info in cells:
         if cell_info is None:
             table_logger.warning(f"None 셀 발견: image_id {image_id}")
@@ -283,7 +262,8 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
             continue
 
         overflow = cell_info.get('overflow', {})
-        if overflow:
+        overflow_applied = cell_info.get('overflow_applied', False)
+        if overflow_applied:
             y1 = min(y1, cell_info.get('overflow_y1', y1))
             y2 = max(y2, cell_info.get('overflow_y2', y2))
 
@@ -294,8 +274,8 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
         attributes = {
             "is_header": cell_info.get('is_header', False),
             "is_merged": cell_info.get('is_merged', False),
-            "has_overflow": bool(overflow),
-            "overflow_direction": overflow.get('direction', 'none') if overflow else 'none',
+            "has_overflow": overflow_applied,
+            "overflow_direction": overflow.get('direction', 'none') if overflow_applied else 'none',
             "is_affected_by_overflow": is_affected,
             "row": cell_info['row'],
             "col": cell_info['col'],
@@ -308,30 +288,31 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
             "x1": x1,
             "y1": y1,
             "x2": x2,
-            "y2": y2
+            "y2": y2,
+            "overflow_applied": overflow_applied
         }
         
         # 셀 카테고리 결정
         cell_type = cell_info.get('cell_type', 'normal_cell')
         if cell_info.get('is_merged', False):
-            if overflow:
+            if overflow_applied:
                 category_id = MERGED_OVERFLOW_CELL_CATEGORY_ID
                 category_name = "merged_overflow_cell"
             else:
                 category_id = MERGED_CELL_CATEGORY_ID
                 category_name = "merged_cell"
-        elif overflow:
+        elif overflow_applied:
             category_id = OVERFLOW_CELL_CATEGORY_ID
             category_name = "overflow_cell"
         else:
             category_id = CELL_CATEGORY_ID
-        category_name = "cell"
-
+            category_name = "cell"
 
         annotation = create_annotation(coords, category_id, category_name, attributes)
         if annotation:
             coco_annotations.append(annotation)
             annotation_id += 1
+
 
     # 테이블 어노테이션 생성
     table_attributes = {

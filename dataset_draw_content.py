@@ -123,7 +123,6 @@ def add_dots(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, color: Tu
         draw.ellipse([(dot_x-dot_size, dot_y-dot_size), 
                       (dot_x+dot_size, dot_y+dot_size)], 
                      fill=color)
-        
 def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str, 
                          bg_color: Tuple[int, int, int], empty_cell_ratio: float = config.empty_cell_ratio) -> None:
     draw = ImageDraw.Draw(img)
@@ -152,11 +151,43 @@ def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str,
         if config.enable_text_generation and content_type in ['text', 'mixed']:
             # 'is_header' 키가 없는 경우를 처리
             is_header = cell.get('is_header', False)
-            add_text_to_cell(draw, {**cell, 'is_header': is_header}, font_path, content_color, position)
+            
+            # 여러 줄의 텍스트 생성
+            multi_line_text = generate_multi_line_text(min_lines=4, max_lines=6)
+            
+            # 셀 크기에 맞게 텍스트 줄바꿈
+            font = ImageFont.truetype(font_path, size=random.randint(10, 20))
+            wrapped_text = wrap_text(multi_line_text, cell_width - 10, font)  # 10은 여백
+            
+            add_text_to_cell(draw, {**cell, 'is_header': is_header}, font_path, content_color, position, text=wrapped_text)
         
         if config.enable_shapes and content_type in ['shapes', 'mixed']:
             add_shapes(img, cell['x1'], cell['y1'], cell_width, cell_height, cell_bg_color, 
                        num_shapes=random.randint(1, 2), size_range=(5, min(cell_width, cell_height) // 3))
+
+def generate_multi_line_text(min_lines=4, max_lines=6):
+    lines = []
+    num_lines = random.randint(min_lines, max_lines)
+    for _ in range(num_lines):
+        lines.append(random.choice(COMMON_WORDS))
+    return '\n'.join(lines)
+
+def wrap_text(text, max_width, font):
+    words = text.split()
+    lines = []
+    current_line = []
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        bbox = font.getbbox(test_line)
+        width, height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        if width <= max_width:
+            current_line.append(word)
+        else:
+            lines.append(' '.join(current_line))
+            current_line = [word]
+    lines.append(' '.join(current_line))
+    return '\n'.join(lines)
+
 
 def add_title_to_image(img: Image.Image, image_width: int, image_height: int, 
                        margin_top: int, bg_color: Tuple[int, int, int]) -> int:

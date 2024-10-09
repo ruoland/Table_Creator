@@ -1,73 +1,135 @@
 import random
-import numpy as np
-import cv2
-from dataset_utils import is_overlapping, validate_cell
-from dataset_config import TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, COLUMN_CATEGORY_ID, ROW_CATEGORY_ID
-from logging_config import table_logger, get_memory_handler
+from dataset_utils import is_overlapping
+from logging_config import table_logger
 def plan_cell_overflow(cells, config):
     if not config.enable_overflow:
         return cells
 
-    rows = max(cell['row'] for cell in cells) + 1
-    cols = max(cell['col'] for cell in cells) + 1
-
     overflow_count = 0
+    merged_overflow_count = 0
     affected_cells = set()
+    cell_dict = {(cell['row'], cell['col']): cell for cell in cells}
 
-    for cell in cells:
+    table_logger.warning(f"오버플로우 계획 시작: 총 {len(cells)}개 셀")
+
+    # 셀을 무작위 순서로 처리하되, 병합된 셀을 우선적으로 처리
+    shuffled_cells = sorted(cells, key=lambda x: x.get('is_merged', False), reverse=True)
+    shuffled_cells = random.sample(shuffled_cells, len(shuffled_cells))
+
+    for cell in shuffled_cells:
         if (not cell['is_header'] and 
-            1 <= cell['row'] < rows - 1 and  
-            1 <= cell['col'] < cols - 1 and  
-            random.random() < config.overflow_probability and
-            (cell['row'], cell['col']) not in affected_cells):  
+            0 <= cell['row'] < config.total_rows and  
+            0 <= cell['col'] < config.total_cols and  
+            (cell['row'], cell['col']) not in affected_cells):
             
-            overflow_height = random.randint(config.min_overflow_height, config.max_overflow_height)
-            direction = random.choice(['up', 'down', 'both'])
-            
-            if direction == 'up':
-                height_up = overflow_height
-                height_down = 0
-            elif direction == 'down':
-                height_up = 0
-                height_down = overflow_height
-            else:  
-                height_up = overflow_height // 2
-                height_down = overflow_height - height_up
+            overflow_prob = config.merged_overflow_probability if cell['is_merged'] else config.overflow_probability
+
+            table_logger.warning(f"셀 처리 중: row={cell['row']}, col={cell['col']}, is_merged={cell['is_merged']}")
+
+            if random.random() < overflow_prob:
+                merge_rows = cell.get('merge_rows', 1)
+                merge_cols = cell.get('merge_cols', 1)
                 
-            cell['overflow'] = {
-                'direction': direction,
-                'height_up': height_up,
-                'height_down': height_down,
-                'affected_cells': []
-            }
+                possible_directions = ['down'] if cell['row'] == 0 else ['up'] if cell['row'] + merge_rows == config.total_rows else ['up', 'down', 'both']
+                direction = random.choice(possible_directions)
+                
+                overflow_height = random.randint(config.min_overflow_height, config.max_overflow_height)
+                height_up = overflow_height if direction == 'up' else (overflow_height // 2 if direction == 'both' else 0)
+                height_down = overflow_height if direction == 'down' else (overflow_height - height_up if direction == 'both' else 0)
+                
+                table_logger.warning(f"오버플로우 계획: direction={direction}, height_up={height_up}, height_down={height_down}")
 
-            # 오버플로우 처리
-            for r in range(cell['row']-1, -1, -1):
-                affected_cell = next((c for c in cells if c['row'] == r and c['col'] == cell['col']), None)
-                if affected_cell:
-                    cell['overflow']['affected_cells'].append(affected_cell)
-                    affected_cells.add((affected_cell['row'], affected_cell['col']))
-                    if cell['y1'] - cell['overflow']['height_up'] >= affected_cell['y1']:
-                        break
+                can_overflow = True
+                affected_cells_temp = []
 
-            for r in range(cell['row']+1, rows):
-                affected_cell = next((c for c in cells if c['row'] == r and c['col'] == cell['col']), None)
-                if affected_cell:
-                    cell['overflow']['affected_cells'].append(affected_cell)
-                    affected_cells.add((affected_cell['row'], affected_cell['col']))
-                    if cell['y2'] + cell['overflow']['height_down'] <= affected_cell['y2']:
-                        break
+                # 오버플로우 영역 확인 함수 수정
+                def check_overflow_area(start_row, end_row, start_col, end_col):
+                    for r in range(start_row, end_row):
+                        for c in range(start_col, end_col):
+                            affected_cell = cell_dict.get((r, c))
+                            if affected_cell:
+                                if (affected_cell['row'], affected_cell['col']) in affected_cells:
+                                    table_logger.warning(f"오버플로우 불가: 이미 영향받은 셀 - row={r}, col={c}")
+                                    return False
+                                if affected_cell.get('overflow') and not cell['is_merged']:
+                                    table_logger.warning(f"오버플로우 불가: 이미 오버플로우된 셀 - row={r}, col={c}")
+                                    return False
+                                if 'overflow_y1' in affected_cell and affected_cell['overflow_y1'] < cell['y2']:
+                                    table_logger.warning(f"오버플로우 불가: 위쪽 겹침 - row={r}, col={c}")
+                                    return False
+                                if 'overflow_y2' in affected_cell and affected_cell['overflow_y2'] > cell['y1']:
+                                    table_logger.warning(f"오버플로우 불가: 아래쪽 겹침 - row={r}, col={c}")
+                                    return False
+                                affected_cells_temp.append(affected_cell)
+                    return True
 
-            # 오버플로우된 셀의 타입 업데이트
-            if cell.get('overflow'):
-                        if cell['cell_type'] == 'merged_cell':
+                # 위쪽 오버플로우 확인
+                if height_up > 0:
+                    can_overflow = check_overflow_area(
+                        max(0, cell['row'] - config.max_overflow_check_rows),
+                        cell['row'],
+                        cell['col'],
+                        cell['col'] + merge_cols
+                    )
+
+                # 아래쪽 오버플로우 확인
+                if can_overflow and height_down > 0:
+                    can_overflow = check_overflow_area(
+                        cell['row'] + merge_rows,
+                        min(config.total_rows, cell['row'] + merge_rows + config.max_overflow_check_rows),
+                        cell['col'],
+                        cell['col'] + merge_cols
+                    )
+
+                if can_overflow and affected_cells_temp:
+                    original_y1, original_y2 = cell['y1'], cell['y2']
+                    
+                    cell['overflow'] = {
+                        'direction': direction,
+                        'height_up': height_up,
+                        'height_down': height_down,
+                        'affected_cells': affected_cells_temp
+                    }
+                    
+                    # 오버플로우 영역 설정
+                    cell['overflow_y1'] = cell['y1'] - height_up if direction in ['up', 'both'] else cell['y1']
+                    cell['overflow_y2'] = cell['y2'] + height_down if direction in ['down', 'both'] else cell['y2']
+                    
+                    # 실제 오버플로우가 발생했는지 확인
+                    if cell['overflow_y1'] == original_y1 and cell['overflow_y2'] == original_y2:
+                        table_logger.warning(f"오버플로우 계획되었으나 적용되지 않음: row={cell['row']}, col={cell['col']}")
+                        cell.pop('overflow', None)
+                        cell.pop('overflow_y1', None)
+                        cell.pop('overflow_y2', None)
+                        cell['overflow_applied'] = False
+                        if cell['is_merged']:
+                            cell['cell_type'] = 'merged_cell'
+                        else:
+                            cell['cell_type'] = 'cell'
+                    else:
+                        table_logger.warning(f"오버플로우 적용됨: row={cell['row']}, col={cell['col']}, direction={direction}")
+                        cell['overflow_applied'] = True
+                        # 오버플로우가 적용된 경우
+                        if cell['is_merged']:
                             cell['cell_type'] = 'merged_overflow_cell'
+                            merged_overflow_count += 1
                         else:
                             cell['cell_type'] = 'overflow_cell'
-            overflow_count += 1
+                            overflow_count += 1
 
-    table_logger.info(f"오버플로우 계획: 총 {overflow_count}개 셀에 적용")
+                        for affected_cell in affected_cells_temp:
+                            affected_cells.add((affected_cell['row'], affected_cell['col']))
+
+                        for r in range(cell['row'], cell['row'] + merge_rows):
+                            for c in range(cell['col'], cell['col'] + merge_cols):
+                                affected_cells.add((r, c))
+                else:
+                    table_logger.warning(f"오버플로우 적용 불가: row={cell['row']}, col={cell['col']}")
+
+    table_logger.warning(f"오버플로우 계획 완료: 총 {overflow_count}개 일반 셀, {merged_overflow_count}개 병합 셀에 적용")
     return cells
+
+
 def validate_cell_coordinates(cells, table_bbox):
     for cell in cells:
         # x 좌표 조정
@@ -84,16 +146,19 @@ def validate_cell_coordinates(cells, table_bbox):
         if cell['y2'] - cell['y1'] < 1:
             cell['y2'] = cell['y1'] + 1
         
-        table_logger.debug(f"Validated cell: {cell}")
     return cells
-
-# create_table 함수의 마지막에 추가
 def adjust_cell_positions(cells, config, table_bbox):
     if not config.enable_overflow:
         return cells
+    
+    table_logger.warning(f"셀 위치 조정 시작: 총 {len(cells)}개 셀")
     log_cell_coordinates(cells, "Start of adjust_cell_positions")
     adjusted_count = 0
+    
     for cell in cells:
+        original_x1, original_x2 = cell['x1'], cell['x2']
+        original_y1, original_y2 = cell['y1'], cell['y2']
+        
         # 기본 x1 및 x2 좌표 검증 추가 
         cell['x1'] = max(cell['x1'], table_bbox[0])
         cell['x2'] = min(cell['x2'], table_bbox[2])
@@ -101,63 +166,107 @@ def adjust_cell_positions(cells, config, table_bbox):
         # x1이 x2보다 크거나 같은 경우 조정 
         if cell['x1'] >= cell['x2']:
             middle_x = (cell['x1'] + cell['x2']) / 2 
-            cell['x1'] = max(middle_x - 1 ,table_bbox[0]) 
-            cell['x2'] = min(middle_x + 1 ,table_bbox[2]) 
+            cell['x1'] = max(middle_x - 1, table_bbox[0]) 
+            cell['x2'] = min(middle_x + 1, table_bbox[2]) 
+        
+        if cell['x1'] != original_x1 or cell['x2'] != original_x2:
+            table_logger.warning(f"X 좌표 조정: row={cell['row']}, col={cell['col']}, x1: {original_x1} -> {cell['x1']}, x2: {original_x2} -> {cell['x2']}")
 
-        if cell.get('overflow'):
-            direction=cell ['overflow']['direction']
-            height_up=cell ['overflow']['height_up']
-            height_down=cell ['overflow']['height_down']
+        if cell.get('overflow') and cell.get('overflow_applied', False):
+            direction = cell['overflow']['direction']
+            height_up = cell['overflow']['height_up']
+            height_down = cell['overflow']['height_down']
+            
+            # 병합된 셀 여부 확인
+            is_merged = cell.get('is_merged', False)
+            merge_rows = cell.get('merge_rows', 1)
+            merge_cols = cell.get('merge_cols', 1)
             
             if direction in ['up', 'both']:
-                cell ['overflow_y1']=max(cell ['y1']-height_up ,table_bbox[1])
+                cell['overflow_y1'] = max(cell['y1'] - height_up, table_bbox[1])
             if direction in ['down', 'both']:
-                cell ['overflow_y2']=min(cell ['y2']+height_down ,table_bbox[3])
+                cell['overflow_y2'] = min(cell['y2'] + height_down, table_bbox[3])
             
-            for affected_cell in cell ['overflow']['affected_cells']:
-                if affected_cell ['row']<cell ['row'] and direction in ['up', 'both']:
-                    affected_cell ['overflow_y2']=max(cell ['overflow_y1'], affected_cell ['y1'])
-                    affected_cell ['is_affected_by_overflow']=True 
-                elif affected_cell ['row']>cell ['row'] and direction in ['down', 'both']:
-                    affected_cell ['overflow_y1']=min(cell ['overflow_y2'], affected_cell ['y2'])
-                    affected_cell ['is_affected_by_overflow']=True 
+            # 실제로 오버플로우가 적용되었는지 다시 확인
+            if cell['overflow_y1'] == original_y1 and cell['overflow_y2'] == original_y2:
+                table_logger.warning(f"오버플로우 취소: row={cell['row']}, col={cell['col']}, 변화 없음")
+                cell.pop('overflow', None)
+                cell.pop('overflow_y1', None)
+                cell.pop('overflow_y2', None)
+                cell.pop('overflow_applied', None)
+                if cell['is_merged']:
+                    cell['cell_type'] = 'merged_cell'
+                else:
+                    cell['cell_type'] = 'cell'
+            else:
+                table_logger.warning(f"오버플로우 적용: row={cell['row']}, col={cell['col']}, direction={direction}, y1: {original_y1} -> {cell['overflow_y1']}, y2: {original_y2} -> {cell['overflow_y2']}")
+                # 영향을 받는 셀 처리
+                for affected_cell in cell['overflow']['affected_cells']:
+                    if affected_cell['row'] < cell['row'] and direction in ['up', 'both']:
+                        if is_merged:
+                            affected_cell['overflow_y2'] = max(cell['overflow_y1'], affected_cell['y2'] - merge_rows)
+                        else:
+                            affected_cell['overflow_y2'] = max(cell['overflow_y1'], affected_cell['y1'])
+                        affected_cell['is_affected_by_overflow'] = True 
+                        table_logger.warning(f"영향받은 셀 조정 (위): row={affected_cell['row']}, col={affected_cell['col']}, y2: {affected_cell['y2']} -> {affected_cell['overflow_y2']}")
+                    elif affected_cell['row'] > cell['row'] + merge_rows - 1 and direction in ['down', 'both']:
+                        if is_merged:
+                            affected_cell['overflow_y1'] = min(cell['overflow_y2'], affected_cell['y1'] + merge_rows)
+                        else:
+                            affected_cell['overflow_y1'] = min(cell['overflow_y2'], affected_cell['y2'])
+                        affected_cell['is_affected_by_overflow'] = True 
+                        table_logger.warning(f"영향받은 셀 조정 (아래): row={affected_cell['row']}, col={affected_cell['col']}, y1: {affected_cell['y1']} -> {affected_cell['overflow_y1']}")
                 
-                adjusted_count+=1 
+                adjusted_count += 1 
 
     for cell in cells:
-        if'overflow_y1'in cell:
-            cell ['overflow_y1']=max(min(cell ['overflow_y1'],cell ['y2']-1),table_bbox[1])
+        if 'overflow_y1' in cell:
+            original_y1 = cell['overflow_y1']
+            cell['overflow_y1'] = max(min(cell['overflow_y1'], cell['y2']-1), table_bbox[1])
+            if cell['overflow_y1'] != original_y1:
+                table_logger.warning(f"오버플로우 y1 조정: row={cell['row']}, col={cell['col']}, y1: {original_y1} -> {cell['overflow_y1']}")
         
-        if'overflow_y2'in cell:
-            cell ['overflow_y2']=min(max(cell ['overflow_y2'],cell ['y1']+1),table_bbox[3])
+        if 'overflow_y2' in cell:
+            original_y2 = cell['overflow_y2']
+            cell['overflow_y2'] = min(max(cell['overflow_y2'], cell['y1']+1), table_bbox[3])
+            if cell['overflow_y2'] != original_y2:
+                table_logger.warning(f"오버플로우 y2 조정: row={cell['row']}, col={cell['col']}, y2: {original_y2} -> {cell['overflow_y2']}")
         
         # 기본 y 좌표 검증 
-        cell ['y1']=max(cell ['y1'],table_bbox[1])
-        cell ['y2']=min(cell ['y2'],table_bbox[3])
+        original_y1, original_y2 = cell['y1'], cell['y2']
+        cell['y1'] = max(cell['y1'], table_bbox[1])
+        cell['y2'] = min(cell['y2'], table_bbox[3])
         
         # y 좌표 조정 
-        if cell ['y1']>=cell ['y2']:
-            middle_y=(cell ['y1']+cell ['y2'])/2 
-            cell ['y1']=max(middle_y-1 ,table_bbox[1]) 
-            cell ['y2']=min(middle_y+1 ,table_bbox[3]) 
+        if cell['y1'] >= cell['y2']:
+            middle_y = (cell['y1'] + cell['y2']) / 2 
+            cell['y1'] = max(middle_y - 1, table_bbox[1]) 
+            cell['y2'] = min(middle_y + 1, table_bbox[3]) 
+        
+        if cell['y1'] != original_y1 or cell['y2'] != original_y2:
+            table_logger.warning(f"Y 좌표 조정: row={cell['row']}, col={cell['col']}, y1: {original_y1} -> {cell['y1']}, y2: {original_y2} -> {cell['y2']}")
 
         # 최종 검증 
-        cell ['x1']=max(min(cell ['x1'],table_bbox[2]),table_bbox[0]) 
-        cell ['x2']=max(min(cell ['x2'],table_bbox[2]),table_bbox[0]) 
-        cell ['y1']=max(min(cell ['y1'],table_bbox[3]),table_bbox[1]) 
-        cell ['y2']=max(min(cell ['y2'],table_bbox[3]),table_bbox[1]) 
+        cell['x1'] = max(min(cell['x1'], table_bbox[2]), table_bbox[0]) 
+        cell['x2'] = max(min(cell['x2'], table_bbox[2]), table_bbox[0]) 
+        cell['y1'] = max(min(cell['y1'], table_bbox[3]), table_bbox[1]) 
+        cell['y2'] = max(min(cell['y2'], table_bbox[3]), table_bbox[1]) 
 
         # 최소 크기 확인 
-        if (cell['x2']-cell['x1'])< 10 or (cell['y2']-cell['y1'])<10:
+        if (cell['x2'] - cell['x1']) < 10 or (cell['y2'] - cell['y1']) < 10:
             table_logger.warning(f"Invalid size after adjustment: {cell}")
+
     log_cell_coordinates(cells, "End of adjust_cell_positions")
-    table_logger.info(f"셀 위치 조정: {adjusted_count}개 셀의 위치가 조정됨")
+    table_logger.warning(f"셀 위치 조정 완료: {adjusted_count}개 셀의 위치가 조정됨")
     return cells
+
+
 def log_cell_coordinates(cells, stage):
     table_logger.debug(f"=== Cell coordinates at {stage} ===")
     for cell in cells:
         table_logger.debug(f"Cell: row={cell['row']}, col={cell['col']}, x1={cell['x1']}, y1={cell['y1']}, x2={cell['x2']}, y2={cell['y2']}")
     table_logger.debug("=" * 50)
+    
 def merge_cells(cells, rows, cols, config):
     table_logger.debug(f"merge_cells 시작: 행 {rows}, 열 {cols}")
     if rows <= 3 or cols <= 3 or not config.enable_cell_merging:
@@ -209,8 +318,6 @@ def merge_cells(cells, rows, cols, config):
                 row += 1
 
     # 병합된 셀 정보 업데이트
-    # 병합된 셀 정보 업데이트
-    # 병합된 셀 정보 업데이트
     for area in merged_areas:
         row_start, col_start, row_end, col_end = area
         base_cell = merged_cells[row_start * cols + col_start]
@@ -224,7 +331,15 @@ def merge_cells(cells, rows, cols, config):
             for c in range(col_start, col_end):
                 if r != row_start or c != col_start:
                     merged_cells[r * cols + c] = None
-
+        # 병합된 셀에 대한 오버플로우 확률 증가
+        if random.random() < config.merged_overflow_probability:
+            base_cell['overflow'] = {
+                'direction': random.choice(['up', 'down', 'both']),
+                'height_up': random.randint(config.min_overflow_height, config.max_overflow_height),
+                'height_down': random.randint(config.min_overflow_height, config.max_overflow_height),
+                'affected_cells': []
+            }
+            base_cell['cell_type'] = 'merged_overflow_cell'
     # None이 아닌 셀만 유지
     cells = [cell for cell in merged_cells if cell is not None]
 

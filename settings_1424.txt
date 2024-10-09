@@ -1,0 +1,1 @@
+Imperfect: N | Gap: N | Rounded: N | Overflow: Y | No Border Prob: 0.42 | Line Break Prob: 0.14

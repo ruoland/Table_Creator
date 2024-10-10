@@ -57,10 +57,6 @@ def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, i
             validate_cell_structure(cells, "불완전성 적용 후")
         img, cells, table_bbox, transform_matrix, new_width, new_height = apply_realistic_effects(img, cells, table_bbox, title_height, config)
         validate_cell_structure(cells, "현실적 효과 적용 후")
-        if config.enable_table_cropping and random.random() < config.table_crop_probability:
-            img, cells, table_bbox = apply_table_cropping(img, cells, table_bbox, config.max_crop_ratio)
-            
-            new_width, new_height = img.size
 
         coco_annotations = generate_coco_annotations(cells, table_bbox, image_id, config)
         
@@ -81,33 +77,6 @@ def validate_cell_structure(cells, stage):
 # 각 주요 단계 후에 호출
 
 
-def apply_table_cropping(img, cells, table_bbox, max_crop_ratio):
-    log_trace()
-    width, height = img.size
-    crop_direction = random.choice(['left', 'right', 'top', 'bottom'])
-    crop_amount = int(random.uniform(0, max_crop_ratio) * min(width, height))
-
-    if crop_direction == 'left':
-        new_img = img.crop((crop_amount, 0, width, height))
-        cells = [{**c, 'x1': max(0, c['x1'] - crop_amount), 'x2': max(0, c['x2'] - crop_amount)} for c in cells]
-        table_bbox = [max(0, table_bbox[0] - crop_amount), table_bbox[1], table_bbox[2] - crop_amount, table_bbox[3]]
-    elif crop_direction == 'right':
-        new_img = img.crop((0, 0, width - crop_amount, height))
-        cells = [{**c, 'x2': min(width - crop_amount, c['x2'])} for c in cells]
-        table_bbox = [table_bbox[0], table_bbox[1], min(width - crop_amount, table_bbox[2]), table_bbox[3]]
-    elif crop_direction == 'top':
-        new_img = img.crop((0, crop_amount, width, height))
-        cells = [{**c, 'y1': max(0, c['y1'] - crop_amount), 'y2': max(0, c['y2'] - crop_amount)} for c in cells]
-        table_bbox = [table_bbox[0], max(0, table_bbox[1] - crop_amount), table_bbox[2], table_bbox[3] - crop_amount]
-    else:  # bottom
-        new_img = img.crop((0, 0, width, height - crop_amount))
-        cells = [{**c, 'y2': min(height - crop_amount, c['y2'])} for c in cells]
-        table_bbox = [table_bbox[0], table_bbox[1], table_bbox[2], min(height - crop_amount, table_bbox[3])]
-
-    # 유효하지 않은 셀 제거
-    cells = [cell for cell in cells if cell['x2'] > cell['x1'] and cell['y2'] > cell['y1']]
-
-    return new_img, cells, table_bbox
 def draw_rounded_rectangle_with_selective_sides(draw, bbox, radius, color, width, draw_left, draw_right):
     x0, y0, x1, y1 = bbox
     # 상단 선

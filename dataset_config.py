@@ -85,7 +85,7 @@ class TableGenerationConfig:
         table_types = ['no_header', 'header_row', 'header_column', 'header_both']  # 가능한 테이블 유형들
         self.table_type = random.choices(table_types, weights=table_type_weights)[0]  # 랜덤으로 테이블 유형 선택
         self.config_mode = 'Random'  # 설정 모드 (None 또는 Random)
-        self.total_images = 10  # 생성할 총 이미지 수
+        self.total_images = 100  # 생성할 총 이미지 수
 
         # 이미지 크기 및 해상도 설정
         self.min_image_width, self.max_image_width = 800, 2400  # 이미지 너비 범위
@@ -152,7 +152,7 @@ class TableGenerationConfig:
         self.overflow_probability = 0.4  # 오버플로우 발생 확률
         self.max_overflow_height = 50  # 최대 오버플로우 높이
         self.min_overflow_height = 10  # 최소 오버플로우 높이
-        self.merged_overflow_probability = 0.4  # 병합된 셀의 오버플로우 확률
+        self.merged_overflow_probability = 0.7  # 병합된 셀의 오버플로우 확률
         self.max_overflow_check_rows = 5  # 오버플로우 영향을 확인할 최대 행 수
         
         # 도형 설정
@@ -163,18 +163,7 @@ class TableGenerationConfig:
         self.shape_line_width = 2  # 도형 선 두께
         self.shape_generation_ratio = 0.2  # 도형 생성 비율
 
-        # 그룹 헤더 설정
-        self.enable_group_headers = False  # 그룹 헤더 사용 여부
-        self.group_header_probability = 0.5  # 그룹 헤더 생성 확률
-        self.max_group_header_rows = 2  # 최대 그룹 헤더 행 수
-        self.max_group_header_cols = 3  # 최대 그룹 헤더 열 수
-        self.group_header_offset = 10  # 그룹 헤더 오프셋
-        self.group_header_min_height = 20  # 그룹 헤더 최소 높이
-        self.group_header_min_width = 20  # 그룹 헤더 최소 너비
-        self.group_header_height = 30  # 그룹 헤더 높이
-        self.min_rows_for_group_header = 8  # 그룹 헤더 추가를 위한 최소 행 수
-        self.group_header_interval = 1  # 그룹 헤더 간격
-
+       
         # 셀 병합 설정
         self.enable_cell_merging = True  # 셀 병합 사용 여부
         self.merged_cell_probability = 0.5  # 셀 병합 확률
@@ -526,10 +515,10 @@ class TableGenerationConfig:
         # 테이블 구조 랜덤화
         self.min_table_width = random.randint(300, 800)
         self.min_table_height = random.randint(300, 800)
-        self.min_cols = random.randint(5, 15)
-        self.max_cols = random.randint(self.min_cols, 30)
-        self.min_rows = random.randint(5, 15)
-        self.max_rows = random.randint(self.min_rows, 30)
+        self.min_cols = random.randint(8, 20)
+        self.max_cols = random.randint(self.min_cols, 40)
+        self.min_rows = random.randint(8, 20)
+        self.max_rows = random.randint(self.min_rows, 40)
         self.set_table_dimensions()
 
         # 둥근 모서리 설정 랜덤화
@@ -582,11 +571,11 @@ class TableGenerationConfig:
         self.common_word_probability = random.uniform(0.3, 0.7)
 
         # 오버플로우 설정 랜덤화
-        self.enable_overflow = random.choices([True, False], weights=[5, 5])[0]
-        self.overflow_probability = random.uniform(0.3, 0.5)
+        self.enable_overflow = random.choices([True, False], weights=[4, 6])[0]
+        self.overflow_probability = random.uniform(0.2, 0.5)
         self.min_overflow_height = random.randint(15, 25)
         self.max_overflow_height = random.randint(self.min_overflow_height, 60)
-        self.merged_overflow_probability = random.uniform(0.3, 0.8)  # 병합된 셀의 오버플로우 확률
+        self.merged_overflow_probability = random.uniform(0.3, 0.6)  # 병합된 셀의 오버플로우 확률
 
         # 도형 설정 랜덤화
         self.enable_shapes = random.choice([True, False])
@@ -596,15 +585,15 @@ class TableGenerationConfig:
         self.shape_generation_ratio = random.uniform(0.1, 0.3)
 
         # 셀 병합 설정 랜덤화
-        self.enable_cell_merging = random.choices([True, False], weights=[5, 5])[0]
+        self.enable_cell_merging = random.choices([True, False], weights=[6, 4])[0]
         self.enable_horizontal_merge = random.choices([True, False], weights=[5,5])[0]
         self.enable_vertical_merge = random.choices([True, False], weights=[5, 5])[0]
-        self.merged_cell_ratio = random.uniform(0.1, 0.5)
-        self.merged_cell_probability = random.uniform(0.2, 0.5)
+        self.merged_cell_ratio = random.uniform(0.2, 0.5)
+        self.merged_cell_probability = random.uniform(0.3, 0.6)
         self.max_horizontal_merge = random.randint(2, 4)
         self.max_vertical_merge = random.randint(2, 4)
-        self.horizontal_merge_probability = random.uniform(0.2, 0.5)
-        self.vertical_merge_probability = random.uniform(0.2, 0.5)
+        self.horizontal_merge_probability = random.uniform(0.4, 0.6)
+        self.vertical_merge_probability = random.uniform(0.4, 0.6)
 
         # 색상 설정 랜덤화
         self.color_brightness_threshold = random.randint(100, 150)
@@ -639,7 +628,7 @@ class TableGenerationConfig:
         self.randomize_brightness_contrast_effect()
         self.randomize_shadow_effect()
 
-        # 테이블 잘림 설정 랜덤화
+        # 테이블 잘림/제거/자르기 설정 랜덤화
         self.enable_table_cropping = False
         if self.enable_table_cropping:
             self.table_crop_probability = random.uniform(0.1, 0.2)

@@ -39,96 +39,51 @@ def plan_cell_overflow(cells, config):
                 
                 table_logger.warning(f"오버플로우 계획: direction={direction}, height_up={height_up}, height_down={height_down}")
 
-                can_overflow = True
-                affected_cells_temp = []
-
-                # 오버플로우 영역 확인 함수 수정
-                def check_overflow_area(start_row, end_row, start_col, end_col):
-                    for r in range(start_row, end_row):
-                        for c in range(start_col, end_col):
-                            affected_cell = cell_dict.get((r, c))
-                            if affected_cell:
-                                if (affected_cell['row'], affected_cell['col']) in affected_cells:
-                                    table_logger.warning(f"오버플로우 불가: 이미 영향받은 셀 - row={r}, col={c}")
-                                    return False
-                                if affected_cell.get('overflow') and not cell['is_merged']:
-                                    table_logger.warning(f"오버플로우 불가: 이미 오버플로우된 셀 - row={r}, col={c}")
-                                    return False
-                                if 'overflow_y1' in affected_cell and affected_cell['overflow_y1'] < cell['y2']:
-                                    table_logger.warning(f"오버플로우 불가: 위쪽 겹침 - row={r}, col={c}")
-                                    return False
-                                if 'overflow_y2' in affected_cell and affected_cell['overflow_y2'] > cell['y1']:
-                                    table_logger.warning(f"오버플로우 불가: 아래쪽 겹침 - row={r}, col={c}")
-                                    return False
-                                affected_cells_temp.append(affected_cell)
-                    return True
-
-                # 위쪽 오버플로우 확인
-                if height_up > 0:
-                    can_overflow = check_overflow_area(
-                        max(0, cell['row'] - config.max_overflow_check_rows),
-                        cell['row'],
-                        cell['col'],
-                        cell['col'] + merge_cols
-                    )
-
-                # 아래쪽 오버플로우 확인
-                if can_overflow and height_down > 0:
-                    can_overflow = check_overflow_area(
-                        cell['row'] + merge_rows,
-                        min(config.total_rows, cell['row'] + merge_rows + config.max_overflow_check_rows),
-                        cell['col'],
-                        cell['col'] + merge_cols
-                    )
-
-                if can_overflow and affected_cells_temp:
-                    original_y1, original_y2 = cell['y1'], cell['y2']
-                    
+                if not is_overlapping_with_merged_cells(cell, [c for c in cells if c.get('is_merged')], height_up + height_down):
                     cell['overflow'] = {
                         'direction': direction,
                         'height_up': height_up,
                         'height_down': height_down,
-                        'affected_cells': affected_cells_temp
                     }
-                    
-                    # 오버플로우 영역 설정
                     cell['overflow_y1'] = cell['y1'] - height_up if direction in ['up', 'both'] else cell['y1']
                     cell['overflow_y2'] = cell['y2'] + height_down if direction in ['down', 'both'] else cell['y2']
-                    
-                    # 실제 오버플로우가 발생했는지 확인
-                    if cell['overflow_y1'] == original_y1 and cell['overflow_y2'] == original_y2:
-                        table_logger.warning(f"오버플로우 계획되었으나 적용되지 않음: row={cell['row']}, col={cell['col']}")
-                        cell.pop('overflow', None)
-                        cell.pop('overflow_y1', None)
-                        cell.pop('overflow_y2', None)
-                        cell['overflow_applied'] = False
-                        if cell['is_merged']:
-                            cell['cell_type'] = 'merged_cell'
-                        else:
-                            cell['cell_type'] = 'cell'
+                    cell['overflow_applied'] = True
+
+                    if cell['is_merged']:
+                        cell['cell_type'] = 'merged_overflow_cell'
+                        merged_overflow_count += 1
                     else:
-                        table_logger.warning(f"오버플로우 적용됨: row={cell['row']}, col={cell['col']}, direction={direction}")
-                        cell['overflow_applied'] = True
-                        # 오버플로우가 적용된 경우
-                        if cell['is_merged']:
-                            cell['cell_type'] = 'merged_overflow_cell'
-                            merged_overflow_count += 1
-                        else:
-                            cell['cell_type'] = 'overflow_cell'
-                            overflow_count += 1
+                        cell['cell_type'] = 'overflow_cell'
+                        overflow_count += 1
 
-                        for affected_cell in affected_cells_temp:
-                            affected_cells.add((affected_cell['row'], affected_cell['col']))
-
-                        for r in range(cell['row'], cell['row'] + merge_rows):
-                            for c in range(cell['col'], cell['col'] + merge_cols):
-                                affected_cells.add((r, c))
+                    for r in range(cell['row'], cell['row'] + merge_rows):
+                        for c in range(cell['col'], cell['col'] + merge_cols):
+                            affected_cells.add((r, c))
                 else:
                     table_logger.warning(f"오버플로우 적용 불가: row={cell['row']}, col={cell['col']}")
 
     table_logger.warning(f"오버플로우 계획 완료: 총 {overflow_count}개 일반 셀, {merged_overflow_count}개 병합 셀에 적용")
     return cells
 
+def is_overlapping_with_merged_cells(cell, merged_cells, overflow_height):
+    cell_area = [
+        cell['x1'],
+        min(cell['y1'], cell['y1'] - overflow_height),
+        cell['x2'],
+        max(cell['y2'], cell['y2'] + overflow_height)
+    ]
+    for merged_cell in merged_cells:
+        if merged_cell == cell:
+            continue
+        merged_area = [
+            merged_cell['x1'],
+            merged_cell['y1'],
+            merged_cell['x2'],
+            merged_cell['y2']
+        ]
+        if is_overlapping(cell_area, merged_area):
+            return True
+    return False
 
 def validate_cell_coordinates(cells, table_bbox):
     for cell in cells:
@@ -200,23 +155,6 @@ def adjust_cell_positions(cells, config, table_bbox):
                     cell['cell_type'] = 'cell'
             else:
                 table_logger.warning(f"오버플로우 적용: row={cell['row']}, col={cell['col']}, direction={direction}, y1: {original_y1} -> {cell['overflow_y1']}, y2: {original_y2} -> {cell['overflow_y2']}")
-                # 영향을 받는 셀 처리
-                for affected_cell in cell['overflow']['affected_cells']:
-                    if affected_cell['row'] < cell['row'] and direction in ['up', 'both']:
-                        if is_merged:
-                            affected_cell['overflow_y2'] = max(cell['overflow_y1'], affected_cell['y2'] - merge_rows)
-                        else:
-                            affected_cell['overflow_y2'] = max(cell['overflow_y1'], affected_cell['y1'])
-                        affected_cell['is_affected_by_overflow'] = True 
-                        table_logger.warning(f"영향받은 셀 조정 (위): row={affected_cell['row']}, col={affected_cell['col']}, y2: {affected_cell['y2']} -> {affected_cell['overflow_y2']}")
-                    elif affected_cell['row'] > cell['row'] + merge_rows - 1 and direction in ['down', 'both']:
-                        if is_merged:
-                            affected_cell['overflow_y1'] = min(cell['overflow_y2'], affected_cell['y1'] + merge_rows)
-                        else:
-                            affected_cell['overflow_y1'] = min(cell['overflow_y2'], affected_cell['y2'])
-                        affected_cell['is_affected_by_overflow'] = True 
-                        table_logger.warning(f"영향받은 셀 조정 (아래): row={affected_cell['row']}, col={affected_cell['col']}, y1: {affected_cell['y1']} -> {affected_cell['overflow_y1']}")
-                
                 adjusted_count += 1 
 
     for cell in cells:
@@ -261,12 +199,12 @@ def adjust_cell_positions(cells, config, table_bbox):
     return cells
 
 
+
 def log_cell_coordinates(cells, stage):
     table_logger.debug(f"=== Cell coordinates at {stage} ===")
     for cell in cells:
         table_logger.debug(f"Cell: row={cell['row']}, col={cell['col']}, x1={cell['x1']}, y1={cell['y1']}, x2={cell['x2']}, y2={cell['y2']}")
     table_logger.debug("=" * 50)
-    
 def merge_cells(cells, rows, cols, config):
     table_logger.debug(f"merge_cells 시작: 행 {rows}, 열 {cols}")
     if rows <= 3 or cols <= 3 or not config.enable_cell_merging:
@@ -288,7 +226,7 @@ def merge_cells(cells, rows, cols, config):
                 if random.random() < config.horizontal_merge_probability:
                     merge_cols = random.randint(2, min(config.max_horizontal_merge, cols - col))
                     merge_area = (row, col, row + 3, col + merge_cols) 
-                    if not any(is_overlapping(merge_area, area) for area in merged_areas):
+                    if not is_overlapping_with_merged_or_overflow(merge_area, merged_areas, merged_cells):
                         new_cell_info = create_merged_cell(merged_cells, row, col, 3, merge_cols, cols, config) 
                         if new_cell_info:
                             merged_cells[row * cols + col] = new_cell_info 
@@ -308,7 +246,7 @@ def merge_cells(cells, rows, cols, config):
                         break
                     merge_rows = random.randint(2, max_merge)  # 최소 2행부터 병합 가능하도록 변경
                     merge_area = (row, col, row + merge_rows, col + 1)
-                    if not any(is_overlapping(merge_area, area) for area in merged_areas):
+                    if not is_overlapping_with_merged_or_overflow(merge_area, merged_areas, merged_cells):
                         new_cell_info = create_merged_cell(merged_cells, row, col, merge_rows, 1, cols, config)
                         if new_cell_info:
                             merged_cells[row * cols + col] = new_cell_info
@@ -331,15 +269,7 @@ def merge_cells(cells, rows, cols, config):
             for c in range(col_start, col_end):
                 if r != row_start or c != col_start:
                     merged_cells[r * cols + c] = None
-        # 병합된 셀에 대한 오버플로우 확률 증가
-        if random.random() < config.merged_overflow_probability:
-            base_cell['overflow'] = {
-                'direction': random.choice(['up', 'down', 'both']),
-                'height_up': random.randint(config.min_overflow_height, config.max_overflow_height),
-                'height_down': random.randint(config.min_overflow_height, config.max_overflow_height),
-                'affected_cells': []
-            }
-            base_cell['cell_type'] = 'merged_overflow_cell'
+
     # None이 아닌 셀만 유지
     cells = [cell for cell in merged_cells if cell is not None]
 
@@ -349,6 +279,36 @@ def merge_cells(cells, rows, cols, config):
     log_cell_coordinates(cells, "End of merge_cells")
     table_logger.debug(f"merge_cells 종료: 병합된 셀 수 {len(merged_areas)}, 남은 셀 수 {len(cells)}")
     return cells
+
+def is_overlapping_with_merged_or_overflow(new_area, merged_areas, cells):
+    row_start, col_start, row_end, col_end = new_area
+    
+    # 기존 병합 영역과의 겹침 확인
+    if any(is_overlapping(new_area, area) for area in merged_areas):
+        return True
+    
+    # 오버플로우된 셀과의 겹침 확인
+    for cell in cells:
+        if cell and cell.get('overflow'):
+            cell_row, cell_col = cell['row'], cell['col']
+            cell_rows = cell.get('merge_rows', 1)
+            cell_cols = cell.get('merge_cols', 1)
+            
+            overflow_y1 = cell.get('overflow_y1', cell['y1'])
+            overflow_y2 = cell.get('overflow_y2', cell['y2'])
+            
+            if (col_start < cell_col + cell_cols and col_end > cell_col and
+                row_start < cell['row'] + cell_rows and row_end > cell['row']):
+                # 셀의 기본 영역과 겹침
+                return True
+            
+            if (col_start < cell_col + cell_cols and col_end > cell_col and
+                (row_start < overflow_y2 and row_end > overflow_y1)):
+                # 오버플로우 영역과 겹침
+                return True
+    
+    return False
+
 
 
 def reassign_cell_ids(cells):

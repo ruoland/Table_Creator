@@ -1,16 +1,13 @@
 import random
 import numpy as np
-import cv2
 from dataset_config import TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, COLUMN_CATEGORY_ID, ROW_CATEGORY_ID, MERGED_CELL_CATEGORY_ID, OVERFLOW_CELL_CATEGORY_ID, MERGED_OVERFLOW_CELL_CATEGORY_ID
 from logging_config import table_logger, get_memory_handler
 from table_cell_creator import *
+
 def create_table(image_width, image_height, margins, title_height, config: TableGenerationConfig):
     memory_handler = get_memory_handler()
     table_logger.addHandler(memory_handler)
-    table_type = random.choices(['simple', 'medium', 'complex'], 
-                                weights=[config.simple_table_ratio, 
-                                         config.medium_table_ratio, 
-                                         config.complex_table_ratio])[0]
+    
     try:
         table_logger.debug(f"create_table 시작: 이미지 크기 {image_width}x{image_height}")
         margin_left, margin_top, margin_right, margin_bottom = map(int, margins)
@@ -18,19 +15,14 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         
         # 갭 설정
         gap = random.randint(config.min_cell_gap, config.max_cell_gap) if config.enable_cell_gap else 0
-        if table_type == 'simple':
-            max_rows = config.max_rows_simple
-            max_cols = config.max_cols_simple
-        elif table_type == 'medium':
-            max_rows = config.max_rows_medium
-            max_cols = config.max_cols_medium
-        elif table_type == 'complex':
-            max_rows = config.max_rows_complex
-            max_cols = config.max_cols_complex
+        
+        max_rows = config.max_rows
+        max_cols = config.max_cols
+        
 
         # 테이블 크기 계산 (갭 포함)
-        table_width = max(config.min_table_width, image_width - margin_left - margin_right)
-        table_height = max(config.min_table_height, image_height - margin_top - margin_bottom - title_height)
+        table_width = min(max(config.min_table_width, image_width - margin_left - margin_right), image_width)
+        table_height = min(max(config.min_table_height, image_height - margin_top - margin_bottom - title_height), image_height)
 
         # 행과 열 수 계산 (갭 고려), 최소 2개의 셀 보장
         cols = max(2, min(max_cols, (table_width + gap) // (config.min_cell_width + gap)))
@@ -51,8 +43,8 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         # 셀 크기 계산 (갭 제외)
         available_width = table_width - (cols - 1) * gap
         available_height = table_height - (rows - 1) * gap
-        min_cell_width = max(1, available_width // cols)
-        min_cell_height = max(1, available_height // rows)
+        min_cell_width = max(config.min_cell_width, available_width // cols)
+        min_cell_height = max(config.min_cell_height, available_height // rows)
 
         # 헤더 행과 열의 크기 계산
         header_row_height = int(min_cell_height * config.header_row_height_factor)
@@ -112,7 +104,8 @@ def create_table(image_width, image_height, margins, title_height, config: Table
             margin_left + table_width,
             margin_top + title_height + table_height
         ]
-
+        if table_width > (table_bbox[2] - table_bbox[0]) or table_height > (table_bbox[3] - table_bbox[1]):
+            table_logger.warning(f"Table size exceeds bounding box. Bbox: {table_bbox}, Table: {table_width}x{table_height}")
         table_logger.info(f"초기 셀 생성 완료. 총 셀 수: {len(cells)}")
         cells = validate_all_cells(cells, table_bbox, "cell creation")
         log_cell_coordinates(cells, "After initial validation")
@@ -122,7 +115,7 @@ def create_table(image_width, image_height, margins, title_height, config: Table
 
         # 셀 병합 (옵션)
         if config.enable_cell_merging and len(cells) > 2:
-            cells = merge_cells(cells, rows, cols, config)
+            cells = merge_cells(cells, rows, cols, config, table_bbox)
             table_logger.info(f"셀 병합 후 셀 수: {len(cells)}")
             log_cell_coordinates(cells, "After cell merging")
         cells = validate_all_cells(cells, table_bbox, "cell merging")

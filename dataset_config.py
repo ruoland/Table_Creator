@@ -1,6 +1,8 @@
 import random
 from typing import Dict
-
+from typing import Tuple
+import colorsys
+import random
 CELL_CATEGORY_ID = 0
 
 TABLE_CATEGORY_ID = 1
@@ -22,14 +24,7 @@ class TableGenerationConfig:
     complex_table_ratio: float = 0.1
     dataset_counter = None
 
-    max_rows_simple: int = 5
-    max_cols_simple: int = 5
     
-    max_rows_medium: int = 8
-    max_cols_medium: int = 8
-    
-    max_rows_complex: int = 10
-    max_cols_complex: int = 10
     cell_type_ratios = {
         'normal_cell': 0.70,
         'merged_cell': 0.09,
@@ -85,15 +80,15 @@ class TableGenerationConfig:
         table_types = ['no_header', 'header_row', 'header_column', 'header_both']  # 가능한 테이블 유형들
         self.table_type = random.choices(table_types, weights=table_type_weights)[0]  # 랜덤으로 테이블 유형 선택
         self.config_mode = 'Random'  # 설정 모드 (None 또는 Random)
-        self.total_images = 100  # 생성할 총 이미지 수
+        self.total_images = 20000  # 생성할 총 이미지 수
 
         # 이미지 크기 및 해상도 설정
         self.min_image_width, self.max_image_width = 800, 2400  # 이미지 너비 범위
         self.min_image_height, self.max_image_height = 600, 2400  # 이미지 높이 범위
 
         # 테이블 구조 설정
-        self.min_cols, self.max_cols = 4, 30  # 열 수 범위
-        self.min_rows, self.max_rows = 4, 30  # 행 수 범위
+        self.min_cols, self.max_cols = 4, 10  # 열 수 범위
+        self.min_rows, self.max_rows = 4, 10  # 행 수 범위
         self.min_table_width, self.min_table_height = 200, 100  # 최소 테이블 크기
         self.total_rows = None  # 실제 행 수 (자동 설정)
         self.total_cols = None  # 실제 열 수 (자동 설정)
@@ -119,18 +114,18 @@ class TableGenerationConfig:
 
         # 모서리 및 형태 설정
         self.enable_rounded_corners = True  # 둥근 모서리 사용 여부
-        self.rounded_corner_probability = 0.3  # 둥근 모서리 확률
+        self.rounded_corner_probability = 0.5  # 둥근 모서리 확률
         self.min_corner_radius = 2  # 최소 모서리 반경
-        self.max_corner_radius = 8  # 최대 모서리 반경
+        self.max_corner_radius = 7  # 최대 모서리 반경
         self.enable_rounded_table_corners = True  # 테이블 모서리 둥글게 처리 여부
         self.rounded_table_corner_probability = 0.7  # 테이블 모서리 둥글게 처리 확률
         self.min_table_corner_radius = 5  # 최소 테이블 모서리 반경
-        self.max_table_corner_radius = 30  # 최대 테이블 모서리 반경
+        self.max_table_corner_radius = 24  # 최대 테이블 모서리 반경
 
         # 헤더 설정
         self.header_row_height_factor = 1.0  # 헤더 행 높이 배수
         self.header_col_width_factor = 1.0  # 헤더 열 너비 배수
-        self.no_side_borders_cells_probability = 0.4 # 양옆 선 없는 셀의 확률
+        self.no_side_borders_cells_probability = 0.2 # 양옆 선 없는 셀의 확률
 
         # 여백 설정
         self.min_margin, self.max_margin = 10, 100  # 여백 범위
@@ -149,12 +144,17 @@ class TableGenerationConfig:
 
         # 오버플로우 설정
         self.enable_overflow = True  # 오버플로우 사용 여부
-        self.overflow_probability = 0.4  # 오버플로우 발생 확률
+        self.overflow_probability = 0.7  # 오버플로우 발생 확률
         self.max_overflow_height = 50  # 최대 오버플로우 높이
         self.min_overflow_height = 10  # 최소 오버플로우 높이
         self.merged_overflow_probability = 0.7  # 병합된 셀의 오버플로우 확률
         self.max_overflow_check_rows = 5  # 오버플로우 영향을 확인할 최대 행 수
-        
+        self.overflow_only_row_probability = 0.1
+        self.default_row_height = 30
+        self.default_col_width = 100
+        self.min_overflow_height = 10
+        self.max_overflow_height = 50
+        self.row_overflow_probability = 0.4
         # 도형 설정
         self.enable_shapes = True  # 도형 사용 여부
         self.shape_types = ['rectangle', 'circle', 'triangle', 'line', 'arc', 'polygon']  # 사용 가능한 도형 유형
@@ -172,7 +172,7 @@ class TableGenerationConfig:
         self.max_vertical_merge = 4  # 최대 수직 병합 수
         self.horizontal_merge_probability = 0.3  # 수평 병합 확률
         self.vertical_merge_probability = 0.3  # 수직 병합 확률
-        self.no_border_cell_probability = 0.3  # 테두리가 없는 셀의 확률
+        self.no_border_color_cell_probability = 0.3  # 테두리가 없는 컬러 셀의 확률
 
         # 색상 설정
         self.background_colors = {
@@ -209,7 +209,6 @@ class TableGenerationConfig:
 
         # 불완전성 및 효과 설정
         self.enable_table_imperfections = True  # 테이블 불완전성 사용 여부
-        self.line_imperfection_probability = 0.3  # 선 주변 불완전성 추가 확률
         self.imperfect_ratio = 0.3  # 불완전성 비율
         self.enable_cell_inside_imperfections = True  # 셀 내부 불완전성 사용 여부
         self.enable_random_lines = True  # 랜덤 선 사용 여부
@@ -235,6 +234,7 @@ class TableGenerationConfig:
         self.shadow_blur_radius = 5  # 그림자 블러 반경
         self.shadow_size_ratio = 0.1  # 그림자 크기 비율
         self.shadow_gradient_strength = 1.0  # 그림자 그라데이션 강도
+        self.table_crop_probability = 0.2 # 표 자를 확률, 잘라낼, 자르기, 잘라
 
         # 기타 설정
         self.empty_cell_ratio = 0.1  # 빈 셀 비율
@@ -282,7 +282,7 @@ class TableGenerationConfig:
         self.shape_generation_ratio = 0.2  # 도형 생성 비율
 
 
-        self.no_border_cell_probability = 0.3  # 테두리가 없는 셀의 확률
+        self.no_border_color_cell_probability = 0.3  # 테두리가 없는 컬러 셀의 확률
 
         # 불완전한 선 그리기 설정
         self.enable_imperfect_lines = False  # 불완전한 선 사용 여부
@@ -324,7 +324,6 @@ class TableGenerationConfig:
         self.enable_vertical_merge = False
         self.enable_rounded_table_corners = False
         self.enable_divider_lines = False
-        self.enable_group_headers = False
 
         # 내용 관련
         self.enable_title = False
@@ -347,7 +346,6 @@ class TableGenerationConfig:
         self.enable_contrast_variation = False
         self.enable_perspective_transform = False
         self.enable_shadow = False
-        self.enable_table_cropping = False
         self.enable_background_shapes = False
         self.enable_imperfect_lines = False
 
@@ -359,21 +357,19 @@ class TableGenerationConfig:
         self.merged_overflow_probability = 0.0  # 병합된 셀의 오버플로우 확률
 
         self.gray_cell_probability = 0.0
-        self.line_imperfection_probability = 0.0
         self.random_line_probability = 0.0
         self.cell_imperfection_probability = 0.0
         self.blur_probability = 0.0
-        self.table_crop_probability = 0.0
         self.empty_cell_ratio = 0.0
         self.merged_cell_probability = 0.0
         self.horizontal_merge_probability = 0.0
         self.vertical_merge_probability = 0.0
-        
+        self.table_crop_probability = 0
         self.table_side_line_probability = 0.0
         self.rounded_table_corner_probability = 0.0
         self.horizontal_divider_probability = 0.0
         self.vertical_divider_probability = 0.0
-        self.no_border_cell_probability = 0.0
+        self.no_border_color_cell_probability = 0.0
         self.gray_cell_no_border_probability = 0.0
         
         self.faded_color_probability = 0.0
@@ -420,7 +416,6 @@ class TableGenerationConfig:
         self.shadow_opacity_range = (0, 0)
         self.shadow_blur_radius = 0
         self.shadow_size_ratio = 0
-        self.max_crop_ratio = 0
 
 
     def test_disable_all_effects(self):
@@ -434,9 +429,9 @@ class TableGenerationConfig:
         # 모든 확률 관련 설정이 0인지 확인
         probability_attrs = [
             'cell_no_border_probability', 'rounded_corner_probability', 'outer_border_probability',
-            'overflow_probability', 'gray_cell_probability', 'line_imperfection_probability',
+            'overflow_probability', 'gray_cell_probability', 
             'random_line_probability', 'cell_imperfection_probability', 'blur_probability',
-            'table_crop_probability', 'empty_cell_ratio', 'merged_cell_probability',
+            'empty_cell_ratio', 'merged_cell_probability',
             'horizontal_merge_probability', 'vertical_merge_probability', 'table_side_line_probability',
             'rounded_table_corner_probability', 'horizontal_divider_probability',
             'vertical_divider_probability', 'no_border_cell_probability',
@@ -473,7 +468,6 @@ class TableGenerationConfig:
         assert self.shadow_opacity_range == (0, 0), "shadow_opacity_range should be (0, 0)"
         assert self.shadow_blur_radius == 0, "shadow_blur_radius should be 0"
         assert self.shadow_size_ratio == 0, "shadow_size_ratio should be 0"
-        assert self.max_crop_ratio == 0, "max_crop_ratio should be 0"
 
 
     def apply_simple_config(self):
@@ -483,22 +477,22 @@ class TableGenerationConfig:
         
     def randomize_settings(self):
         # 이미지 크기 랜덤화
-        self.min_image_width = random.randint(800, 1000)
+        self.min_image_width = random.randint(600, 1200)
         self.max_image_width = random.randint(self.min_image_width, 3200)
-        self.min_image_height = random.randint(600, 1000)
-        self.max_image_height = random.randint(self.min_image_height, 3000)
+        self.min_image_height = random.randint(600, 1200)
+        self.max_image_height = random.randint(self.min_image_height, 3600)
 
         # 선 관련 설정 랜덤화
-        self.line_break_probability = random.uniform(0.1, 0.3)
-        self.line_thickness_variation_probability = random.uniform(0.1, 0.3)
+        self.line_break_probability = random.uniform(0.2, 0.6)
+        self.line_thickness_variation_probability = random.uniform(0.3, 0.8)
         self.corner_imperfection_probability = random.uniform(0.1, 0.3)
         self.texture_effect_probability = random.uniform(0.1, 0.3)
         self.line_blur_probability = random.uniform(0.1, 0.3)
-        self.no_border_cell_probability = 0 # 선 제거 코드
+        self.no_border_color_cell_probability = 0.05# 선 제거 코드
 
         # 불완전한 선 그리기 설정
         self.enable_imperfect_lines = True
-        self.imperfect_line_probability = {'top': 0.3, 'bottom': 0.3, 'left': 0.3, 'right': 0.3} # 선 관련 코드
+        self.imperfect_line_probability = {'top': 0.2, 'bottom': 0.2, 'left': 0.2, 'right': 0.2} # 선 관련 코드
         self.no_side_borders_probability = 0
 
         # 셀 크기 설정 랜덤화
@@ -507,18 +501,19 @@ class TableGenerationConfig:
         self.min_cell_height = random.randint(20, 60)
         self.max_cell_height = random.randint(self.min_cell_height, 200)
 
+        self.no_side_borders_cells_probability = random.uniform(0.1, 0.3)
         # 셀 간격 설정 랜덤화
         self.min_cell_gap = random.randint(0, 2)
         self.max_cell_gap = random.randint(self.min_cell_gap, 5)
         self.enable_cell_gap = random.choice([True, False])
 
         # 테이블 구조 랜덤화
-        self.min_table_width = random.randint(300, 800)
-        self.min_table_height = random.randint(300, 800)
-        self.min_cols = random.randint(8, 20)
-        self.max_cols = random.randint(self.min_cols, 40)
-        self.min_rows = random.randint(8, 20)
-        self.max_rows = random.randint(self.min_rows, 40)
+        self.min_table_width = random.randint(200, 400)
+        self.min_table_height = random.randint(200, 400)
+        self.min_cols = random.randint(4, 5)
+        self.max_cols = random.randint(self.min_cols, 7) # 최대 일주일치
+        self.min_rows = random.randint(4, 6)
+        self.max_rows = random.randint(self.min_rows, 12) 
         self.set_table_dimensions()
 
         # 둥근 모서리 설정 랜덤화
@@ -534,15 +529,15 @@ class TableGenerationConfig:
 
         # 헤더 설정 랜덤화
         self.min_header_height = random.randint(1, 5)
-        self.header_row_height_factor = random.uniform(0.5, 1)
+        self.header_row_height_factor = random.uniform(0.2, 0.7)
         self.min_line_thickness = random.randint(1, 2)
-        self.header_col_width_factor = random.uniform(0.2, 1)
+        self.header_col_width_factor = random.uniform(0.2, 0.7)
 
         # 선 스타일 설정 랜덤화
-        self.irregular_thickness_probability = random.uniform(0.3, 0.5)
+        self.irregular_thickness_probability = random.uniform(0.3, 0.7)
         self.line_curve_probability = random.uniform(0.2, 0.3)
         self.color_variation_probability = random.uniform(0.5, 0.8)
-        self.end_imperfection_probability = random.uniform(0.2, 0.5)
+        self.end_imperfection_probability = random.uniform(0.3, 0.5)
         self.transparency_variation_probability = random.uniform(0.3, 0.5)
 
         # 구분선 설정 랜덤화
@@ -554,7 +549,7 @@ class TableGenerationConfig:
         self.min_margin = random.randint(0, 200)
         self.max_margin = random.randint(self.min_margin, 700)
         self.enable_outer_border = random.choice([True, False])
-        self.outer_border_probability = random.uniform(0.8, 0.9)
+        self.outer_border_probability = random.uniform(0.6, 0.8)
         self.min_outer_line_thickness = random.randint(1, 2)
         self.max_outer_line_thickness = random.randint(self.min_outer_line_thickness + 1, 6)
 
@@ -571,12 +566,12 @@ class TableGenerationConfig:
         self.common_word_probability = random.uniform(0.3, 0.7)
 
         # 오버플로우 설정 랜덤화
-        self.enable_overflow = random.choices([True, False], weights=[4, 6])[0]
-        self.overflow_probability = random.uniform(0.2, 0.5)
-        self.min_overflow_height = random.randint(15, 25)
-        self.max_overflow_height = random.randint(self.min_overflow_height, 60)
-        self.merged_overflow_probability = random.uniform(0.3, 0.6)  # 병합된 셀의 오버플로우 확률
-
+        self.enable_overflow = random.choices([True, False], weights=[5, 5])[0]
+        self.overflow_probability = random.uniform(0.5, 0.7)
+        self.min_overflow_height = random.randint(25, 60)
+        self.max_overflow_height = random.randint(self.min_overflow_height, 200)
+        self.merged_overflow_probability = 0.8
+        
         # 도형 설정 랜덤화
         self.enable_shapes = random.choice([True, False])
         self.min_shapes = random.randint(1, 4)
@@ -585,54 +580,47 @@ class TableGenerationConfig:
         self.shape_generation_ratio = random.uniform(0.1, 0.3)
 
         # 셀 병합 설정 랜덤화
-        self.enable_cell_merging = random.choices([True, False], weights=[6, 4])[0]
-        self.enable_horizontal_merge = random.choices([True, False], weights=[5,5])[0]
-        self.enable_vertical_merge = random.choices([True, False], weights=[5, 5])[0]
-        self.merged_cell_ratio = random.uniform(0.2, 0.5)
-        self.merged_cell_probability = random.uniform(0.3, 0.6)
-        self.max_horizontal_merge = random.randint(2, 4)
+        self.enable_cell_merging = random.choices([True, False], weights=[4, 6])[0]
+        self.enable_horizontal_merge = random.choices([True, False], weights=[3,7])[0]
+        self.enable_vertical_merge = random.choices([True, False], weights=[6, 4])[0]
+        self.merged_cell_ratio = random.uniform(0.3, 0.5)
+        self.merged_cell_probability = random.uniform(0.4, 0.7)
+        self.max_horizontal_merge = random.randint(2, 3)
         self.max_vertical_merge = random.randint(2, 4)
-        self.horizontal_merge_probability = random.uniform(0.4, 0.6)
-        self.vertical_merge_probability = random.uniform(0.4, 0.6)
-
+        self.horizontal_merge_probability = random.uniform(0.3, 0.4)
+        self.vertical_merge_probability = random.uniform(0.5, 0.6)
+        self.vertical_merge_overflow_probability = 0.8  # 수직 병합된 셀의 오버플로우 확률 (높게 설정)
         # 색상 설정 랜덤화
         self.color_brightness_threshold = random.randint(100, 150)
         self.dark_gray_range = (random.randint(0, 32), random.randint(33, 96))
-        self.light_gray_range = (random.randint(160, 224), 255)
-        self.medium_gray_range = (random.randint(32, 96), random.randint(97, 160))
-        self.light_medium_gray_range = (random.randint(96, 160), random.randint(161, 224))
+        self.light_gray_range = (random.randint(130, 224), 255)
+        self.medium_gray_range = (random.randint(32, 96), random.randint(66, 160))
+        self.light_medium_gray_range = (random.randint(96, 160), random.randint(121, 224))
         self.faded_color_probability = random.uniform(0.1, 0.4)
-
         # 컬러 셀 및 회색 셀 설정 랜덤화
-        self.enable_colored_cells = random.choices([True, False], weights=[4, 6])[0]
-        self.enable_gray_cells = random.choices([True, False], weights=[4, 6])[0]
+        self.enable_colored_cells = random.choices([True, False], weights=[5, 5])[0]
+        self.enable_gray_cells = random.choices([True, False], weights=[5, 5])[0]
         if self.enable_gray_cells:
             self.gray_cell_probability = random.uniform(0.2, 0.4)
             min_gray = random.randint(30, 100)
             max_gray = random.randint(min_gray + 50, 240)
             self.gray_color_range = (min_gray, max_gray)
-        self.no_gray_cell_probability = random.uniform(0.2, 0.3)
+        self.no_gray_cell_probability = random.uniform(0.1, 0.2)
 
-        # 불완전성 및 효과 설정 랜덤화
-        self.enable_table_imperfections = random.choices([True, False], weights=[3, 7])[0]
-        self.line_imperfection_probability = 0
-        self.imperfect_ratio = 0
-        self.enable_random_lines = True
-        self.enable_cell_inside_imperfections = False
-        self.random_line_probability = 0
-        self.cell_imperfection_probability = 0
-
+        # 불완전성 및 효과 설정 랜덤화  
+        self.enable_table_imperfections = random.choices([True, False], weights=[4, 6])[0]
+        self.imperfect_ratio = random.uniform(0.1, 0.3)
+        self.enable_random_lines = random.choice([True, False])
+        self.enable_cell_inside_imperfections = random.choice([True, False])
+        self.random_line_probability = 0.0
+        self.cell_imperfection_probability = random.uniform(0.1, 0.3)
+        self.table_crop_probability = random.uniform(0.1, 0.2)
         # 특수 효과 설정 랜덤화
         self.randomize_noise_effect()
         self.randomize_blur_effect()
         self.randomize_brightness_contrast_effect()
         self.randomize_shadow_effect()
 
-        # 테이블 잘림/제거/자르기 설정 랜덤화
-        self.enable_table_cropping = False
-        if self.enable_table_cropping:
-            self.table_crop_probability = random.uniform(0.1, 0.2)
-            self.max_crop_ratio = random.uniform(0.2, 0.5)
 
         # 기타 설정 랜덤화
         self.empty_cell_ratio = random.uniform(0.1, 0.2)
@@ -660,11 +648,12 @@ class TableGenerationConfig:
     def randomize_shadow_effect(self):
         self.enable_shadow = random.choices([True, False], weights=[6, 4])[0]
         if self.enable_shadow:
-            self.shadow_opacity_range = (random.randint(30, 70), random.randint(70, 150))
+            self.shadow_opacity_range = (random.randint(10, 30), random.randint(40, 120))
             self.shadow_blur_radius = random.uniform(1, 25)
             self.shadow_size_ratio = random.uniform(0.05, 0.25)
 
-    from typing import Tuple
+
+
     def get_random_pastel_color(self, bg_color: Tuple[int, int, int]):
         if not self.enable_colored_cells:
             return None
@@ -672,56 +661,28 @@ class TableGenerationConfig:
         # 배경 밝기 계산
         bg_brightness = sum(bg_color) / 3
         
-        # 밝은 배경용 파스텔 색상
-        light_pastel_colors = [
-            (255, 255, 255),  # 흰색
-            (255, 182, 193),  # 연한 빨간색 (분홍색)
-            (173, 216, 230),  # 연한 파란색 (하늘색)
-            (144, 238, 144),  # 연한 초록색
-            (255, 255, 224),  # 연한 노란색
-            (230, 230, 250),  # 연한 보라색
-            (255, 218, 185),  # 연한 주황색
-            (211, 211, 211),  # 연한 회색
-            (175, 238, 238),  # 민트색
-        ]
+        # HSV 색상 공간에서 랜덤한 색상 생성
+        hue = random.random()
+        saturation = random.uniform(0.3, 0.7)
+        value = random.uniform(0.7, 1.0) if bg_brightness < 127 else random.uniform(0.5, 0.8)
         
-        # 어두운 배경용 색상
-        dark_pastel_colors = [
-            (100, 149, 237),  # 콘플라워 블루
-            (147, 112, 219),  # 미디엄 퍼플
-            (60, 179, 113),   # 미디엄 시 그린
-            (255, 165, 0),    # 오렌지
-            (255, 99, 71),    # 토마토
-            (70, 130, 180),   # 스틸 블루
-            (186, 85, 211),   # 미디엄 오키드
-            (105, 105, 105),  # 딤 그레이
-        ]
+        # HSV를 RGB로 변환
+        r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
         
-        # 배경 밝기에 따라 색상 리스트 선택
-        if bg_brightness > 127:
-            color_list = light_pastel_colors
-        else:
-            color_list = dark_pastel_colors
+        # RGB 값을 0-255 범위로 변환
+        color = (int(r * 255), int(g * 255), int(b * 255))
         
-        # 랜덤하게 색상 선택
-        base_color = random.choice(color_list)
+        # 배경과의 대비를 위한 추가 처리
+        if bg_brightness > 200:  # 매우 밝은 배경
+            color = tuple(max(0, c - 30) for c in color)
+        elif bg_brightness < 50:  # 매우 어두운 배경
+            color = tuple(min(255, c + 30) for c in color)
         
-        # 약간의 변화를 주기 위해 각 채널에 -10 ~ +10 사이의 랜덤한 값을 더함
-        variation = lambda x: max(0, min(255, x + random.randint(-10, 10)))
-        return tuple(variation(c) for c in base_color)
-    def get_group_header_color(self, bg_color):
-            # 배경색과 구분되는 그룹 헤더 색상 생성
-            r, g, b = bg_color
-            offset = 30  # 색상 차이
-            return (
-                max(0, min(255, r + random.randint(-offset, offset))),
-                max(0, min(255, g + random.randint(-offset, offset))),
-                max(0, min(255, b + random.randint(-offset, offset)))
-            )
+        # 색상에 변화 추가
+        variation = lambda x: max(0, min(255, x + random.randint(-50, 50)))
+        return tuple(variation(c) for c in color)
 
-    def get_group_header_line_thickness(self):
-        # 그룹 헤더의 선 두께 결정
-        return random.randint(2, 4)
+        
 
     def get_random_gray_color(self):
         if not self.enable_gray_cells:

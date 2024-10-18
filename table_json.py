@@ -1,4 +1,4 @@
-import json
+import ujson as json
 from collections import defaultdict
 
 def analyze_coco_annotations(file_path):

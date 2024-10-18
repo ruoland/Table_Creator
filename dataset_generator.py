@@ -3,13 +3,12 @@ from PIL import Image
 import os
 import random, sys
 from tqdm import tqdm
-from dataset_io import save_subset_results
 import numpy as np
 from PIL import Image, ImageDraw
 from dataset_utils import generate_random_resolution
-from dataset_io import compress_and_save_image
+from dataset_io import save_subset_results, compress_and_save_image
 from dataset_config import  TableGenerationConfig
-from dataset_draw import generate_image_and_labels 
+from dataset_table import generate_image_and_labels 
 from multiprocessing import Pool, cpu_count
 from logging_config import  table_logger
 
@@ -33,7 +32,7 @@ def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio
         chunk_size = max(1, len(image_ids) // num_processes)
         for i in range(0, len(image_ids), chunk_size):
             chunk = image_ids[i:i+chunk_size]
-            tasks.append((chunk, output_dir, subset, imperfect_ratio, config))
+            tasks.append((chunk, output_dir, subset, config))
             table_logger.debug(f"Created task: {chunk} for {subset}")
 
     create_tasks(0, train_images, 'train')
@@ -42,7 +41,8 @@ def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio
     table_logger.info(f"Created {len(tasks)} tasks")
 
     with Pool(processes=num_processes) as pool:
-        results = list(tqdm(pool.imap(process_images, tasks), total=len(tasks), desc="Processing images"))
+        results = list(tqdm(pool.imap_unordered(process_images, tasks), total=len(tasks), desc="Processing images"))
+
     all_dataset_info = {'train': [], 'val': []}
     all_coco_annotations = {'train': [], 'val': []}
     
@@ -62,7 +62,7 @@ def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio
     return all_dataset_info, all_coco_annotations
 
 def process_images(args: Tuple[List[int], str, str, float, TableGenerationConfig]):
-    image_ids, output_dir, subset, imperfect_ratio, config = args
+    image_ids, output_dir, subset, config = args
     table_logger.info(f"Processing images {min(image_ids)} to {max(image_ids)} for {subset}")
 
     dataset_info = []

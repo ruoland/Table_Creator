@@ -1,4 +1,4 @@
-import json
+import ujson as json
 import cv2
 import numpy as np
 import os
@@ -164,8 +164,10 @@ class COCOValidator:
 
     def validate_dataset(self):
         self.analyze()
-        while True:
-            image_id = input("확인할 이미지 ID를 입력하세요 (종료하려면 'q' 입력): ")
+        while True: 
+            
+            image_id = input("확인할 이미지 ID를 입력하세요 (종료하려면 'q' 입): ")
+
             if image_id.lower() == 'q':
                 break
             try:

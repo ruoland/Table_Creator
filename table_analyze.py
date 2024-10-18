@@ -1,4 +1,4 @@
-import json
+import ujson as json
 from collections import defaultdict
 
 def analyze_annotations(annotation_file):

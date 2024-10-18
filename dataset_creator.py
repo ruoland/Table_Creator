@@ -1,10 +1,11 @@
 # dataset_creator.py
 from logging_config import table_logger
-import cProfile
 from dataset_config import TableGenerationConfig, DatasetCellTypeCounter
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, freeze_support
+
 from dataset_generator import batch_dataset
 
+import asyncio
 def setup_config():
     config = TableGenerationConfig()
     config.dataset_counter = DatasetCellTypeCounter(config)
@@ -30,12 +31,12 @@ def main():
     
     imperfect_ratio = 0.3
     train_ratio = 0.8
-    num_processes = cpu_count() 
+    num_processes = cpu_count() - 1
 
     config = setup_config()
     num_images = config.total_images
     try:
-        all_dataset_info, all_coco_annotations = run_dataset_generation(
+        batch_dataset(
             output_dir, num_images, imperfect_ratio, train_ratio, num_processes, config
         )
         table_logger.info("프로그램 실행 완료")
@@ -43,4 +44,6 @@ def main():
         table_logger.error(f"메인 프로그램 실행 중 오류 발생: {str(e)}", exc_info=True)
 
 if __name__ == "__main__":
-    cProfile.run("main()", "output.prof")
+
+    freeze_support()  # Windows에서 필요
+    main()

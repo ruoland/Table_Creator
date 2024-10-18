@@ -1,14 +1,11 @@
 from PIL import Image, ImageColor, ImageFont, ImageDraw
 from dataset_utils import *
 from dataset_constant import *
-from logging_config import  get_memory_handler, table_logger
+from logging_config import  table_logger
 from dataset_config import config, MIN_CELL_SIZE_FOR_TEXT, MIN_FONT_SIZE, PADDING
 import numpy as np
 from typing import Dict, Any
 # 상수 정의
-
-
-
 
 def calculate_text_position(x: int, y: int, cell_width: int, cell_height: int, 
                             text_width: int, text_height: int, position: str) -> Tuple[int, int]:
@@ -65,7 +62,7 @@ def add_text_to_cell(draw: ImageDraw.Draw, cell: Dict[str, Any], font_path: str,
         text = random.choice(header_options)
     else:
         # 여러 줄의 텍스트 생성
-        num_lines = random.randint(4, 6)  # 4-6줄의 텍스트 생성
+        num_lines = random.randint(2, 6)  # 4-6줄의 텍스트 생성
         text_lines = []
         for _ in range(num_lines):
             max_text_length = max(1, min(20, cell_width // (font_size // 3)))

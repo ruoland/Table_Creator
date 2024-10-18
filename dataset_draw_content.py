@@ -3,7 +3,6 @@ from PIL import ImageDraw, ImageFilter, Image, ImageFont
 from dataset_utils import *
 from dataset_constant import *
 from dataset_config import TableGenerationConfig, MIN_CELL_SIZE_FOR_CONTENT
-import cv2
 import random
 from logging_config import  get_memory_handler, table_logger
 
@@ -194,16 +193,17 @@ def add_title_to_image(img: Image.Image, image_width: int, image_height: int,
     if not config.enable_title:
         return 0
 
-    bg_color = validate_color(bg_color)
     title = generate_random_title()
     
+    #폰트 설정
     font_size = max(config.min_title_size, min(random.randint(int(image_width * 0.02), int(image_width * 0.1)), config.max_title_size))
     font = ImageFont.truetype(random.choice(config.fonts), font_size)
-    
     draw = ImageDraw.Draw(img)
     left, top, right, bottom = draw.textbbox((0, 0), title, font=font)
+    
     text_width, text_height = right - left, bottom - top
     
+    #이미지 보다 텍스트가 더 길지 않도록
     if text_width > image_width * 0.9:
         words = title.split()
         half = len(words) // 2

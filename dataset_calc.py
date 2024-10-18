@@ -1,4 +1,4 @@
-import json
+import ujson as json
 import numpy as np
 
 def analyze_cell_sizes(annotation_file):

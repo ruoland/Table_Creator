@@ -2,9 +2,8 @@ from logging_config import table_logger, get_memory_handler
 
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
 import random
-import cv2
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 # 상수 정의
 MIN_CELL_SIZE = 5  # 픽셀 단위
@@ -45,22 +44,20 @@ def apply_contrast(image: Image.Image, config) -> Image.Image:
         enhancer = ImageEnhance.Contrast(image)
         return enhancer.enhance(contrast_factor)
     return image
-
 def apply_realistic_effects(image: Image.Image, cells: List[List[float]], table_bbox: List[float], 
                             title_height: int, config) -> Tuple[Image.Image, List[List[float]], List[float], np.ndarray, int, int]:
-    """
-    이미지에 현실적인 효과를 적용합니다.
-    """
     table_logger.debug(f"Applying effects: perspective={config.enable_perspective_transform}, noise={config.enable_noise}, blur={config.enable_blur}")
-
-    transform_matrix = np.eye(3)
 
     new_width, new_height = image.size
 
-    # 그림자 추가 (원근 변환과 독립적으로)
+    # 표 잘라내기 기능 추가
+    if random.random() < config.table_crop_probability:  # 10% 확률로 표 잘라내기 적용
+        image, cells, table_bbox = crop_table(image, cells, table_bbox, config)
+
+    # 기존 효과 적용
     if config.enable_shadow:
         all_directions = ['bottom', 'right', 'left', 'top']
-        num_directions = random.randint(1, 4)  # 1에서 4 사이의 랜덤한 수의 방향 선택
+        num_directions = random.randint(1, 4)
         shadow_directions = random.sample(all_directions, num_directions)
         shadow_opacity = random.randint(*config.shadow_opacity_range)
         image = add_directional_shadow(image, shadow_directions, config.shadow_blur_radius, 
@@ -71,7 +68,59 @@ def apply_realistic_effects(image: Image.Image, cells: List[List[float]], table_
     image = apply_brightness(image, config)
     image = apply_contrast(image, config)
     
-    return image, cells, table_bbox, transform_matrix, new_width, new_height
+    return image, cells, table_bbox, new_width, new_height
+
+def crop_table(image: Image.Image, cells: List[Dict], table_bbox: List[float], config) -> Tuple[Image.Image, List[Dict], List[float]]:
+    # 병합된 셀이나 오버플로우 셀이 있는지 확인
+    if any('is_merged' in cell and cell['is_merged'] for cell in cells) or \
+       any('overflow' in cell and cell['overflow'] for cell in cells):
+        table_logger.info("Table contains merged or overflow cells. Skipping crop operation.")
+        return image, cells, table_bbox
+
+    original_width, original_height = image.size
+    
+    crop_direction = random.choice(['left', 'right', 'top', 'bottom'])
+    crop_amount = random.uniform(0.1, 0.3)
+    
+    x1, y1, x2, y2 = table_bbox
+    table_width = x2 - x1
+    table_height = y2 - y1
+    
+    if crop_direction == 'left':
+        crop_pixels = int(table_width * crop_amount)
+        new_table_bbox = [x1 + crop_pixels, y1, x2, y2]
+    elif crop_direction == 'right':
+        crop_pixels = int(table_width * crop_amount)
+        new_table_bbox = [x1, y1, x2 - crop_pixels, y2]
+    elif crop_direction == 'top':
+        crop_pixels = int(table_height * crop_amount)
+        new_table_bbox = [x1, y1 + crop_pixels, x2, y2]
+    else:  # bottom
+        crop_pixels = int(table_height * crop_amount)
+        new_table_bbox = [x1, y1, x2, y2 - crop_pixels]
+    
+    new_image = image.crop(new_table_bbox)
+    
+    new_cells = []
+    for cell in cells:
+        new_cell = cell.copy()
+        
+        # 기본 셀 좌표 조정
+        new_cell['x1'] = max(0, min(cell['x1'] - new_table_bbox[0], new_image.width))
+        new_cell['y1'] = max(0, min(cell['y1'] - new_table_bbox[1], new_image.height))
+        new_cell['x2'] = max(0, min(cell['x2'] - new_table_bbox[0], new_image.width))
+        new_cell['y2'] = max(0, min(cell['y2'] - new_table_bbox[1], new_image.height))
+        
+        # 유효한 셀만 포함 (완전히 잘린 셀은 제외)
+        if new_cell['x2'] > new_cell['x1'] and new_cell['y2'] > new_cell['y1']:
+            new_cells.append(new_cell)
+    
+    final_table_bbox = [0, 0, new_image.width, new_image.height]
+    
+    table_logger.info(f"Table cropped: direction={crop_direction}, amount={crop_amount:.2f}, new size: {new_image.width}x{new_image.height}")
+    
+    return new_image, new_cells, final_table_bbox
+
 
 
 def add_directional_shadow(image: Image.Image, directions: List[str], blur_radius: float, 

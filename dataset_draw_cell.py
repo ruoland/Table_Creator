@@ -3,7 +3,6 @@ from PIL import ImageDraw, ImageFilter, Image
 from dataset_utils import *
 from dataset_constant import *
 from dataset_config import config, TableGenerationConfig
-import cv2
 import random
 from dataset_draw_content import add_protrusion, add_dots
 from logging_config import  get_memory_handler, table_logger
@@ -14,9 +13,8 @@ import random
 import numpy as np
 from typing import Tuple, List, Optional
 def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int], 
-              is_header: bool, is_imperfect: bool, 
-              table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig,
-              is_no_side_border_row: bool = False) -> Optional[Tuple[int, int, int]]:
+              is_imperfect: bool, 
+              table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig):
     
     table_logger.debug(f"Drawing cell: {cell}")
 
@@ -57,17 +55,15 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
         cell_bg_color = bg_color
 
     # 셀 그리기
-    draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color)
 
     can_draw_border = True
 
-    # 컬러 셀이 활성화되어 있거나 현재 셀이 회색인 경우
-    if config.enable_colored_cells or is_gray:
-        # 무작위 값이 테두리 없는 셀의 확률보다 작은 경우
-        if random.random() < config.no_border_cell_probability:
+    # 컬러 셀이 활성화되어 있는 경우
+    if config.enable_colored_cells:
+        # 테두리 없는 셀 생성
+        if random.random() < config.no_border_color_cell_probability:
             can_draw_border = False
 
-    # 현재 셀이 회색인 경우
     if is_gray:
         # 무작위 값이 회색 셀의 테두리 없는 확률보다 작은 경우
         if random.random() < config.gray_cell_no_border_probability:
@@ -86,8 +82,8 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
         elif is_imperfect and is_no_side_border:
             draw_imperfect_cell_border(draw, x1, y1, x2, y2, line_color, line_thickness, config, is_no_side_border)
         else:
-            line_thickness = 1
-            draw.rectangle([x1, y1, x2, y2], outline=line_color, width=line_thickness)
+            # 일반 직사각형 셀의 경우에만 여기서 배경을 채웁니다
+            draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color, outline=line_color, width=line_thickness)
 
     # 오버플로우 처리
     if cell.get('overflow') and config.enable_overflow:
@@ -110,6 +106,8 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
                 draw_regular_overflow(draw, cell, line_color, line_thickness)
     table_logger.debug(f"Finished drawing cell: {cell}")
     return cell_bg_color
+
+
 def draw_imperfect_cell_border(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, 
                                line_color: Tuple[int, int, int], line_thickness: int, 
                                config: TableGenerationConfig, no_side_borders: bool = False):
@@ -206,22 +204,24 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
         transparent_draw.line([(5, 5), (transparent_line.width-5, transparent_line.height-5)], 
                               fill=(r, g, b, random.randint(128, 255)), width=line_thickness)
         draw.bitmap((min(x1, x2)-5, min(y1, y2)-5), transparent_line, fill=None)
-def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> Tuple[int, int, int]:
+def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int, int, int], config: TableGenerationConfig, count=0) -> Tuple[int, int, int]:
     """선 색상에 변화를 주되, 배경색과의 대비를 유지합니다."""
     r, g, b = line_color
     
     # 각 채널별로 독립적으로 변화를 줍니다
     varied_color = (
-        max(0, min(255, r + random.randint(-20, 20))),
-        max(0, min(255, g + random.randint(-20, 20))),
-        max(0, min(255, b + random.randint(-20, 20)))
+        max(0, min(255, r + random.randint(-40, 40))),
+        max(0, min(255, g + random.randint(-40, 40))),
+        max(0, min(255, b + random.randint(-40, 40)))
     )
     
     # 배경색과의 대비를 확인합니다
     if is_sufficient_contrast(bg_color, varied_color):
         return varied_color
-    else:
-        # 대비가 충분하지 않으면 원래 색상으로 돌아갑니다
+    elif count < 3:
+        # 대비가 충분하지 않으면 다시 계산합니다.
+        return apply_color_variation(line_color, bg_color, config, count+1)
+    else: #3번 시도했지만 실패한 경우 원본으로 반환합니다.
         return line_color
 
 
@@ -365,7 +365,10 @@ def draw_rounded_rectangle(draw, xy, corner_radius, table_bbox, fill=None, outli
     
     # 내부 채우기
     if fill:
-        draw.rectangle([x1, y1, x2, y2], fill=fill)
+        # 중앙 직사각형
+        draw.rectangle([x1 + corner_radius, y1, x2 - corner_radius, y2], fill=fill)
+        # 좌우 직사각형
+        draw.rectangle([x1, y1 + corner_radius, x2, y2 - corner_radius], fill=fill)
         
         # 모서리 그리기 (오버플로우 고려)
         if y1 >= table_y1:  # 상단 모서리

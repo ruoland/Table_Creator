@@ -5,7 +5,7 @@ import sys
 
 def setup_logger():
     logger = logging.getLogger('table_generator')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.WARNING)
 
     # 스트림 핸들러 설정 (콘솔 출력용)
     stream_handler = logging.StreamHandler(sys.stderr)

@@ -42,7 +42,7 @@ def main():
         table_logger.info("프로그램 실행 완료")
     except Exception as e:
         table_logger.error(f"메인 프로그램 실행 중 오류 발생: {str(e)}", exc_info=True)
-
+import cProfile
 if __name__ == "__main__":
 
     freeze_support()  # Windows에서 필요

@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from dataset_config import TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, COLUMN_CATEGORY_ID, ROW_CATEGORY_ID, MERGED_CELL_CATEGORY_ID, OVERFLOW_CELL_CATEGORY_ID, MERGED_OVERFLOW_CELL_CATEGORY_ID
+from dataset_config import TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, COLUMN_CATEGORY_ID, ROW_CATEGORY_ID, MERGED_CELL_CATEGORY_ID, OVERFLOW_CELL_CATEGORY_ID, HEADER_ROW_CATEGORY_ID, HEADER_COLUMN_CATEGORY_ID
 from logging_config import table_logger, get_memory_handler
 from table_cell_creator import *
 
@@ -59,14 +59,36 @@ def create_table(image_width, image_height, margins, title_height, config: Table
         if config.table_type in ['header_column', 'header_both']:
             col_widths[0] = header_col_width
 
-        # 남은 공간 분배
-        extra_width = available_width - sum(col_widths)
-        extra_height = available_height - sum(row_heights)
+        # 0,0 셀(왼쪽 위 셀)의 너비만 랜덤하게 조정
+        if config.table_type in ['header_column', 'header_both']:
+            corner_cell_width_factor = random.uniform(0.5, 2.0)  # 50% ~ 200% 사이의 랜덤 값
+            original_first_col_width = col_widths[0]
+            col_widths[0] = int(col_widths[0] * corner_cell_width_factor)
 
-        for i in range(extra_width):
-            col_widths[i % cols] += 1
-        for i in range(extra_height):
-            row_heights[i % rows] += 1
+            # 너비가 최소값 이하로 내려가지 않도록 보정
+            col_widths[0] = max(col_widths[0], config.min_cell_width)
+
+            # 너비가 테이블 전체 너비의 50%를 넘지 않도록 제한
+            max_width = int(table_width * 0.5)
+            col_widths[0] = min(col_widths[0], max_width)
+
+            # 첫 번째 열의 너비 변화량 계산
+            width_change = col_widths[0] - original_first_col_width
+
+        # 남은 공간 계산 (첫 번째 열 제외)
+        remaining_width = table_width - col_widths[0]
+        remaining_cols = cols - 1
+
+        # 남은 열들의 너비 재조정
+        if remaining_cols > 0:
+            col_width = remaining_width // remaining_cols
+            extra_width = remaining_width % remaining_cols
+            
+            for i in range(1, cols):
+                col_widths[i] = col_width
+                if extra_width > 0:
+                    col_widths[i] += 1
+                    extra_width -= 1
 
         cells = []
         y = margin_top + title_height
@@ -165,8 +187,6 @@ def validate_all_cells(cells, table_bbox, stage_name):
         if cell['x1'] < table_bbox[0] or cell['x2'] > table_bbox[2] or cell['y1'] < table_bbox[1] or cell['y2'] > table_bbox[3]:
             table_logger.warning(f"Cell coordinates out of table bounds after {stage_name}: {cell}")
     return cells
-
-
 def generate_coco_annotations(cells, table_bbox, image_id, config):
     table_logger.debug(f"generate_coco_annotations 시작: 이미지 ID {image_id}, 셀 수 {len(cells)}")
     coco_annotations = []
@@ -203,46 +223,51 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
     cell_rows = sorted(set(cell['row'] for cell in cells))
     cell_cols = sorted(set(cell['col'] for cell in cells))
 
-    
     # 행 어노테이션 생성
     for i, row in enumerate(cell_rows):
         row_cells = [cell for cell in cells if cell['row'] == row]
-        
+
         # 병합 여부와 관계없이 모든 셀의 y1, y2를 고려
         y1 = min(cell['y1'] for cell in row_cells)
         y2 = max(cell['y1'] + cell.get('original_height', cell['y2'] - cell['y1']) for cell in row_cells)
-        
+
         row_coords = [table_bbox[0], y1, table_bbox[2], y2]
         is_header = i == 0 and config.table_type in ['header_row', 'header_both']
-        row_annotation = create_annotation(row_coords, ROW_CATEGORY_ID, "row", {
+        
+        # 헤더 행 어노테이션 생성
+        category_id = HEADER_ROW_CATEGORY_ID if is_header else ROW_CATEGORY_ID
+        row_annotation = create_annotation(row_coords, category_id, "row", {
             "row_id": i,
             "is_header": is_header,
             "y1": y1,
             "y2": y2
         })
+        
         if row_annotation:
             coco_annotations.append(row_annotation)
             annotation_id += 1
-
-
 
     # 열 어노테이션 생성
     for i, col in enumerate(cell_cols):
         col_cells = [cell for cell in cells if cell['col'] == col]
         x1 = min(cell['x1'] for cell in col_cells)
         x2 = max(cell['x2'] for cell in col_cells)
+        
         col_coords = [x1, table_bbox[1], x2, table_bbox[3]]
         is_header = i == 0 and config.table_type in ['header_column', 'header_both']
-        col_annotation = create_annotation(col_coords, COLUMN_CATEGORY_ID, "column", {
+        
+        # 헤더 열 어노테이션 생성
+        category_id = HEADER_COLUMN_CATEGORY_ID if is_header else COLUMN_CATEGORY_ID
+        col_annotation = create_annotation(col_coords, category_id, "column", {
             "column_id": i,
             "is_header": is_header,
             "x1": x1,
             "x2": x2
         })
+        
         if col_annotation:
             coco_annotations.append(col_annotation)
             annotation_id += 1
-
     # 셀 어노테이션 생성
     for cell_info in cells:
         if cell_info is None:
@@ -250,12 +275,14 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
             continue
 
         x1, y1, x2, y2 = cell_info.get('x1'), cell_info.get('y1'), cell_info.get('x2'), cell_info.get('y2')
+        
         if any(coord is None for coord in [x1, y1, x2, y2]):
             table_logger.warning(f"유효하지 않은 좌표를 가진 셀 발견: image_id {image_id}, cell_info: {cell_info}")
             continue
 
         overflow = cell_info.get('overflow', {})
         overflow_applied = cell_info.get('overflow_applied', False)
+        
         if overflow_applied:
             y1 = min(y1, cell_info.get('overflow_y1', y1))
             y2 = max(y2, cell_info.get('overflow_y2', y2))
@@ -286,14 +313,9 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
         }
         
         # 셀 카테고리 결정
-        cell_type = cell_info.get('cell_type', 'normal_cell')
-        if cell_info.get('is_merged', False):
-            if overflow_applied:
-                category_id = MERGED_OVERFLOW_CELL_CATEGORY_ID
-                category_name = "merged_overflow_cell"
-            else:
-                category_id = MERGED_CELL_CATEGORY_ID
-                category_name = "merged_cell"
+        if cell_info.get('is_merged', False) and not overflow_applied:
+            category_id = MERGED_CELL_CATEGORY_ID
+            category_name = "merged_cell"
         elif overflow_applied:
             category_id = OVERFLOW_CELL_CATEGORY_ID
             category_name = "overflow_cell"
@@ -302,10 +324,10 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
             category_name = "cell"
 
         annotation = create_annotation(coords, category_id, category_name, attributes)
+        
         if annotation:
             coco_annotations.append(annotation)
             annotation_id += 1
-
 
     # 테이블 어노테이션 생성
     table_attributes = {
@@ -325,10 +347,12 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
         "actual_rows": len(cell_rows),
         "actual_cols": len(cell_cols)
     }
+    
     table_annotation = create_annotation(table_bbox, TABLE_CATEGORY_ID, "table", table_attributes)
+    
     if table_annotation:
         coco_annotations.append(table_annotation)
-        annotation_id += 1
+    
     table_logger.info(f"generate_coco_annotations 종료: 이미지 ID {image_id}, 생성된 어노테이션 수 {len(coco_annotations)}")
     table_logger.info(f"테이블 구조: {len(cell_rows)}행 x {len(cell_cols)}열")
     table_logger.info(f"원래 의도된 구조: {config.total_rows}행 x {config.total_cols}열")

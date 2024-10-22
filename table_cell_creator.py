@@ -6,7 +6,6 @@ def plan_cell_overflow(cells, config):
         return cells
 
     overflow_count = 0
-    merged_overflow_count = 0
     affected_cells = set()
     cell_dict = {(cell['row'], cell['col']): cell for cell in cells}
 
@@ -24,10 +23,10 @@ def plan_cell_overflow(cells, config):
             0 <= cell['col'] < config.total_cols and  
             (cell['row'], cell['col']) not in affected_cells):
             
-            if cell['cell_type'] == 'merged_overflow_cell':
+            if cell['cell_type'] == 'overflow_cell' and cell.get('is_merged', False):
                 continue
             #확률 계산하기, 만약 병합된 셀인 경우 전용 확률을 사용, 아닌 경우 일반 오버플로 확률 사용
-            overflow_prob = config.merged_overflow_probability if cell['is_merged'] else config.overflow_probability
+            overflow_prob = config.overflow_probability
 
             if overflow_count > config.total_rows / 3 or overflow_count > config.total_cols / 3:
                 continue
@@ -72,10 +71,9 @@ def plan_cell_overflow(cells, config):
                     cell['overflow_applied'] = True
 
                     if cell['is_merged']:
-                        cell['cell_type'] = 'merged_overflow_cell'
+                        cell['cell_type'] = 'overflow_cell'
                         table_logger.warning(f"병합 오버플로우 계획: is_merged={cell['is_merged']}direction={direction}, height_up={height_up}, height_down={height_down}")
                         
-                        merged_overflow_count += 1
                     else:
                         cell['cell_type'] = 'overflow_cell'
                         overflow_count += 1
@@ -87,7 +85,7 @@ def plan_cell_overflow(cells, config):
                     table_logger.debug(f"오버플로우 적용 불가: row={cell['row']}, col={cell['col']}")
 
 
-    table_logger.warning(f"오버플로우 계획 완료: 총 {overflow_count}개 일반 셀, {merged_overflow_count}개 병합 셀에 적용")
+    table_logger.warning(f"오버플로우 계획 완료: 총 {overflow_count}개 일반 셀에 적용")
     return cells
 
 def is_overlapping_with_merged_cells(new_cell, merged_cells):
@@ -115,8 +113,8 @@ def apply_overflow_to_merged_cell(cell, all_cells, config, table_bbox):
     random.shuffle(directions)  # 방향을 무작위로 섞음
 
     for direction in directions:
-        min_height = min(config.min_overflow_height, config.max_cell_height)
-        max_height = max(config.min_overflow_height, config.max_cell_height)
+        min_height = min(config.min_overflow_height, config.max_cell_height - 10)
+        max_height = max(config.min_overflow_height, config.max_cell_height - 10)
         overflow_height = random.randint(min_height, max_height)
 
         
@@ -159,7 +157,7 @@ def apply_overflow_to_merged_cell(cell, all_cells, config, table_bbox):
             cell['overflow_y1'] = overflow_y1
             cell['overflow_y2'] = overflow_y2
             cell['overflow_applied'] = True
-            cell['cell_type'] = 'merged_overflow_cell'
+            cell['cell_type'] = 'overflow_cell'
             return True  # 오버플로우 적용 성공
 
     return False  # 모든 방향에 대해 오버플로우 적용 실패
@@ -418,12 +416,23 @@ def create_merged_cell(cells, start_row, start_col, merge_rows, merge_cols, cols
 def perform_cell_merging(cells, rows, cols, config):
     merged_cells = cells.copy()
     merged_areas = []
+    header_cells = []  # 헤더 셀들을 저장할 리스트
     log_cell_coordinates(merged_cells, "Start of merge_cells")
 
+    # 헤더 셀 식별 및 저장
+    for cell in merged_cells:
+        if ((cell['row'] == 0 and config.table_type in ['header_row', 'header_both']) or
+            (cell['col'] == 0 and config.table_type in ['header_column', 'header_both'])):
+            header_cells.append(cell)
     if config.enable_horizontal_merge:
         for row in range(rows):
+            if row == 0 and config.table_type in ['header_row', 'header_both']:
+                continue  # 헤더 행 스킵
             col = 0 
             while col < cols - 3:
+                if col == 0 and config.table_type in ['header_column', 'header_both']:
+                    col += 1  # 헤더 열 스킵
+                    continue
                 if random.random() < config.horizontal_merge_probability:
                     merge_cols = random.randint(2, min(config.max_horizontal_merge, cols - col))
                     merge_area = (row, col, row + 3, col + merge_cols) 
@@ -438,8 +447,13 @@ def perform_cell_merging(cells, rows, cols, config):
 
     if config.enable_vertical_merge:
         for col in range(cols):
+            if col == 0 and config.table_type in ['header_column', 'header_both']:
+                continue  # 헤더 열 스킵
             row = 0
             while row < rows - 2:
+                if row == 0 and config.table_type in ['header_row', 'header_both']:
+                    row += 1  # 헤더 행 스킵
+                    continue
                 if random.random() < config.vertical_merge_probability:
                     max_merge = min(config.max_vertical_merge, rows - row)
                     if max_merge < 2:
@@ -470,7 +484,9 @@ def perform_cell_merging(cells, rows, cols, config):
             for c in range(col_start, col_end):
                 if r != row_start or c != col_start:
                     merged_cells[r * cols + c] = None
-
+    # None이 아닌 셀과 헤더 셀 모두 유지
+    merged_cells = [cell for cell in merged_cells if cell is not None]
+    
     # None이 아닌 셀만 유지
     return [cell for cell in merged_cells if cell is not None]
 
@@ -490,7 +506,7 @@ def is_overlapping_with_merged_or_overflow(new_area, merged_areas, cells):
     
     # 오버플로우된 셀과의 겹침 확인
     for cell in cells:
-        if cell and (cell.get('overflow') or cell.get('cell_type') == 'merged_overflow_cell'):
+        if cell and (cell.get('overflow') or (cell.get('overflow') and cell.get('is_merged'))):
             cell_row, cell_col = cell['row'], cell['col']
             cell_rows = cell.get('merge_rows', 1)
             cell_cols = cell.get('merge_cols', 1)

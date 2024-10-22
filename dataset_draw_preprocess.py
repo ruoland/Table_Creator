@@ -45,7 +45,7 @@ def apply_contrast(image: Image.Image, config) -> Image.Image:
         return enhancer.enhance(contrast_factor)
     return image
 def apply_realistic_effects(image: Image.Image, cells: List[List[float]], table_bbox: List[float], 
-                            title_height: int, config) -> Tuple[Image.Image, List[List[float]], List[float], np.ndarray, int, int]:
+                            config) -> Tuple[Image.Image, List[List[float]], List[float], np.ndarray, int, int]:
     table_logger.debug(f"Applying effects: perspective={config.enable_perspective_transform}, noise={config.enable_noise}, blur={config.enable_blur}")
 
     new_width, new_height = image.size

@@ -62,6 +62,8 @@ def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio
     return all_dataset_info, all_coco_annotations
 
 def process_images(args: Tuple[List[int], str, str, float, TableGenerationConfig]):
+    import os
+
     image_ids, output_dir, subset, config = args
     table_logger.info(f"Processing images {min(image_ids)} to {max(image_ids)} for {subset}")
 
@@ -110,4 +112,5 @@ def process_images(args: Tuple[List[int], str, str, float, TableGenerationConfig
             table_logger.warning(f"Failed to generate image: ID {image_id} for {subset}")
 
     table_logger.info(f"Completed processing images for {subset}")
+    
     return dataset_info, coco_annotations

@@ -83,8 +83,9 @@ def merge_datasets(dataset1_path, dataset2_path, output_path):
         print(result)
 
 if __name__ == "__main__":
-    dataset1_path = r"C:\project\table_color2_5000_행위주"
-    dataset2_path = r"C:\project\table_color2_5000_오버플로위주"
-    output_path = r"C:\project\merged_1011"
+    simple_dataset_path = r"C:\project\table_color2 ver5 전이학습1"  # 단순한 패턴 데이터셋 경로
+    complex_dataset_path = r"C:\project\table_color2 ver5 전이학습1 추가"  # 복잡한 패턴 데이터셋 경로
+    output_path = r"C:\project\merged_gray_ver5"  # 출력 경로
+
     
-    merge_datasets(dataset1_path, dataset2_path, output_path)
+    merge_datasets(simple_dataset_path, complex_dataset_path, output_path)

@@ -16,7 +16,8 @@ class COCOValidator:
             'cell': (255, 255, 0),
             'merged_cell': (255, 0, 255),
             'overflow_cell': (0, 255, 255),
-            'merged_overflow_cell': (255, 165, 0)
+            'header_row' : (255,255,255),
+            'header_column' : (255,255,255),
         }
         self.visibility = {category: True for category in self.colors.keys()}
         
@@ -27,7 +28,8 @@ class COCOValidator:
             3: 'column',
             4: 'merged_cell',
             5: 'overflow_cell',
-            6: 'merged_overflow_cell'
+            6: 'header_row',
+            7: 'header_column'
         }
         self.scale_factor = 1.0
 
@@ -127,7 +129,8 @@ class COCOValidator:
         cv2.setMouseCallback(f"Image ID: {image_id}", on_mouse_click)
 
         print("\n카테고리 토글 키:")
-        print("t: 테이블, r: 행, c: 열, e: 일반 셀, m: 병합 셀, o: 오버플로우 셀, v: 병합 오버플로우 셀")
+        print("t: 테이블, r: 행, c: 열, e: 일반 셀, m: 병합 셀, o: 오버플로우 셀")
+        print("j: 헤더 행, h: 헤더 열")
         print("a: 모든 카테고리 토글, q: 이미지 닫기")
         print("+: 확대, -: 축소")
 
@@ -147,8 +150,10 @@ class COCOValidator:
                 toggle_category('merged_cell')
             elif key == ord('o'):
                 toggle_category('overflow_cell')
-            elif key == ord('v'):
-                toggle_category('merged_overflow_cell')
+            elif key == ord('j'):
+                toggle_category('header_row')
+            elif key == ord('h'):
+                toggle_category('header_column')
             elif key == ord('a'):
                 for category in self.visibility:
                     self.visibility[category] = not self.visibility[category]
@@ -165,8 +170,7 @@ class COCOValidator:
     def validate_dataset(self):
         self.analyze()
         while True: 
-            
-            image_id = input("확인할 이미지 ID를 입력하세요 (종료하려면 'q' 입): ")
+            image_id = input("확인할 이미지 ID를 입력하세요 (종료하려면 'q' 입력): ")
 
             if image_id.lower() == 'q':
                 break

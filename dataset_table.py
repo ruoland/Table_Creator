@@ -12,14 +12,15 @@ from table_generation import generate_coco_annotations
 from logging_config import  table_logger
 import traceback
 import traceback
-
+DEBUG = False
 def log_trace():
-    stack = traceback.extract_stack()
-    table_logger.debug("Current call stack:")
-    for filename, lineno, name, line in stack[:-1]:  # 마지막 항목(현재 함수)은 제외
-        table_logger.debug(f"  File {filename}, line {lineno}, in {name}")
-        if line:
-            table_logger.debug(f"    {line.strip()}")
+    if DEBUG:
+        stack = traceback.extract_stack()
+        table_logger.debug("Current call stack:")
+        for filename, lineno, name, line in stack[:-1]:  # 마지막 항목(현재 함수)은 제외
+            table_logger.debug(f"  File {filename}, line {lineno}, in {name}")
+            if line:
+                table_logger.debug(f"    {line.strip()}")
 
 
 def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, is_imperfect=False, config:TableGenerationConfig=None):
@@ -53,7 +54,7 @@ def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, i
         if is_imperfect:
             img = apply_imperfections(img, cells)
             validate_cell_structure(cells, "불완전성 적용 후")
-        img, cells, table_bbox, new_width, new_height = apply_realistic_effects(img, cells, table_bbox, title_height, config)
+        img, cells, table_bbox, new_width, new_height = apply_realistic_effects(img, cells, table_bbox, config)
         validate_cell_structure(cells, "현실적 효과 적용 후")
 
         coco_annotations = generate_coco_annotations(cells, table_bbox, image_id, config)
@@ -133,15 +134,8 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
         if not strict_validate_cell(cell):
             table_logger.warning(f"Invalid cell: {cell}")
             continue
-        
-        is_header = cell['is_header']
 
-        if config.enable_colored_cells and not is_header:
-            cell_bg_color = config.get_random_pastel_color(bg_color) or bg_color
-        elif config.enable_gray_cells:
-            cell_bg_color = config.get_random_gray_color() or bg_color
-        else:
-            cell_bg_color = bg_color
+        cell_bg_color = bg_color
         try:
             draw_cell(draw, cell, line_color, is_imperfect, table_bbox, cell_bg_color, config)
         except Exception as e:

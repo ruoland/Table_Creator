@@ -4,7 +4,6 @@ from dataset_utils import *
 from dataset_constant import *
 from dataset_config import config, TableGenerationConfig
 import random
-from dataset_draw_content import add_protrusion, add_dots
 from logging_config import  get_memory_handler, table_logger
 
 from typing import Tuple, List, Optional
@@ -12,8 +11,7 @@ from PIL import ImageDraw, ImageFilter, Image, ImageFont
 import random
 import numpy as np
 from typing import Tuple, List, Optional
-
-    # 셀 그리기
+# 셀 그리기
 def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int], 
               is_imperfect: bool, 
               table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig):
@@ -24,6 +22,14 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
     table_logger.debug(f"Cell type: {cell_type}")
 
     is_gray = cell.get('is_gray', False)
+    if config.enable_gray_cells and is_gray:
+        cell_bg_color = config.get_random_gray_color(bg_color) or bg_color
+    else:
+        cell_bg_color = bg_color
+
+    # 셀 배경색 정보 저장
+    cell['bg_color'] = cell_bg_color
+    is_overflow = cell.get('is_overflow', False)
 
     x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
 
@@ -31,11 +37,7 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
     x1, x2 = min(x1, x2), max(x1, x2)
     y1, y2 = min(y1, y2), max(y1, y2)
     
-    # 오버플로우 처리
-    if 'overflow_y1' in cell:
-        y1 = min(y1, cell['overflow_y1'])
-    if 'overflow_y2' in cell:
-        y2 = max(y2, cell['overflow_y2'])
+    # 오버플로우 처리는 이제 redraw_cell_with_overflow 함수에서 처리됩니다.
 
     # 최소 크기 보장
     if x2 <= x1:
@@ -47,24 +49,22 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
 
     # 셀 배경색 결정
     if config.enable_gray_cells and is_gray:
-        cell_bg_color = config.get_random_gray_color() or bg_color
+        cell_bg_color = config.get_random_gray_color(bg_color) or bg_color
     else:
         cell_bg_color = bg_color
 
     # 셀 그리기
-    can_draw_border = True
+    can_draw_border = not (is_gray and random.random() < config.no_border_gray_cell_probability)
 
-    if is_gray:
-        # 무작위 값이 회색 셀의 테두리 없는 확률보다 작은 경우
-        if random.random() < config.no_border_gray_cell_probability:
-            can_draw_border = False
+    # 셀 배경 그리기
+    draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color)
 
     if can_draw_border:
         line_thickness = config.get_random_line_thickness()
         is_rounded = config.enable_rounded_corners and random.random() < config.rounded_corner_probability
         is_no_side_border = random.random() < config.no_side_borders_cells_probability
 
-        # 원래 위치에 선 그리기
+        # 테두리 그리기
         if is_rounded:
             corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
             draw_rounded_rectangle(draw, [x1, y1, x2, y2], corner_radius, table_bbox,
@@ -72,11 +72,17 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
         elif is_imperfect and is_no_side_border:
             draw_imperfect_cell_border(draw, x1, y1, x2, y2, line_color, line_thickness, config, is_no_side_border)
         else:
-            draw.rectangle([x1, y1, x2, y2], fill=None, outline=line_color, width=line_thickness)
+            if not is_overflow or cell['overflow']['direction'] == 'up':
+                draw.line([(x1, y1), (x2, y1)], fill=line_color, width=line_thickness)
+            if not is_overflow or cell['overflow']['direction'] == 'down':
+                draw.line([(x1, y2), (x2, y2)], fill=line_color, width=line_thickness)
+            if not is_overflow:
+                draw.line([(x1, y1), (x1, y2)], fill=line_color, width=line_thickness)
+                draw.line([(x2, y1), (x2, y2)], fill=line_color, width=line_thickness)
 
-        # 셀을 아래로 이동한 효과 만들기
-        if random.random() < config.cell_shift_down_probability:
-            offset = random.randint(2, 5)
+        # 셀을 아래로 이동한 효과 만들기 (오버플로우가 아닌 경우에만)
+        if not cell.get('overflow') and not is_overflow and not cell.get('is_header') and random.random() < config.cell_shift_down_probability:
+            offset = random.randint(1, 2)
             
             # 위쪽 선을 배경색으로 덮기
             draw.line([(x1, y1), (x2, y1)], fill=bg_color, width=offset)
@@ -90,30 +96,6 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
             # 좌우 선 다시 그리기
             draw.line([(x1, y1 + offset), (x1, y2)], fill=line_color, width=line_thickness)
             draw.line([(x2, y1 + offset), (x2, y2)], fill=line_color, width=line_thickness)
-    else:
-        # 테두리를 그리지 않는 경우, 셀 배경만 그리기
-        draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color)
-
-    # 오버플로우 처리
-    if cell.get('overflow') and config.enable_overflow:
-        overflow = cell['overflow']
-        direction = overflow['direction']
-        overflow_y1 = max(table_bbox[1], cell.get('overflow_y1', y1))
-        overflow_y2 = min(table_bbox[3], cell.get('overflow_y2', y2))
-        
-        # 오버플로우 영역 그리기
-        if direction in ['up', 'both'] and overflow_y1 < y1:
-            draw.rectangle([x1, overflow_y1, x2, y1], fill=cell_bg_color)
-        if direction in ['down', 'both'] and overflow_y2 > y2:
-            draw.rectangle([x1, y2, x2, overflow_y2], fill=cell_bg_color)
-
-        # 오버플로우 테두리 그리기
-        if can_draw_border:
-            if is_rounded:
-                draw_rounded_overflow(draw, cell, line_color, line_thickness, corner_radius, table_bbox)
-            else:
-                draw_regular_overflow(draw, cell, line_color, line_thickness)
-
     table_logger.debug(f"Finished drawing cell: {cell}")
     return cell_bg_color
 
@@ -132,13 +114,15 @@ def draw_imperfect_cell_border(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, 
     for side, (start, end) in sides:
         if no_side_borders and side in ['left', 'right']:
             continue  # 양옆 선을 그리지 않음
-        if random.random() < config.imperfect_line_probability[side]:
+        if config.enable_imperfect_lines and random.random() < config.imperfect_line_probability[side]:
             draw_imperfect_line(draw, start, end, line_color, line_thickness, config)
+            
+            
 def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple[int, int], 
                         line_color: Tuple[int, int, int], line_thickness: int, config: TableGenerationConfig):
     x1, y1 = start
     x2, y2 = end
-    
+    r, g, b = line_color
     # 1. 선의 끊김 효과 (기존 코드)
     if random.random() < config.line_break_probability:
         mid = ((x1 + x2) // 2, (y1 + y2) // 2)
@@ -146,7 +130,7 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
         if random.random() < 0.5:  # 50% 확률로 나머지 반쪽을 그림
             draw.line([mid, end], fill=line_color, width=line_thickness)
     
-    # 2. 선의 불규칙한 두께
+    # 2. 선의 불규칙한 두께 (기존 코드)
     if random.random() < config.irregular_thickness_probability:
         num_segments = random.randint(5, 10)
         for i in range(num_segments):
@@ -163,7 +147,7 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
     else:
         draw.line([start, end], fill=line_color, width=line_thickness)
     
-    # 3. 선의 미세한 굴곡
+    # 3. 선의 미세한 굴곡 (기존 코드)
     if random.random() < config.line_curve_probability:
         num_points = 10
         points = []
@@ -174,13 +158,7 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
             points.append((x, y))
         draw.line(points, fill=line_color, width=line_thickness)
     
-        # 4. 색상 변화
-    if random.random() < config.color_variation_probability:
-        varied_color = apply_color_variation(line_color, line_color, config)
-        draw.line([start, end], fill=varied_color, width=line_thickness)
-    else:
-        draw.line([start, end], fill=line_color, width=line_thickness)
-            
+    # 4. 선 끝점의 불완전성 (기존 코드)
     if random.random() < config.end_imperfection_probability:
         for point in [start, end]:
             size = random.randint(1, 3)  # 크기 변화
@@ -189,16 +167,16 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
             draw.ellipse([point[0]-size+offset_x, point[1]-size+offset_y, 
                         point[0]+size+offset_x, point[1]+size+offset_y], 
                         fill=line_color, outline=line_color)
-    # 6. 모서리 불완전성 (기존 코드)
+    
+    # 5. 모서리 불완전성 (기존 코드)
     if random.random() < config.corner_imperfection_probability:
         corner_size = random.randint(1, 3)
         if (x1, y1) == start:  # 왼쪽 위 또는 왼쪽 아래 모서리
             draw.rectangle([x1-corner_size, y1-corner_size, x1+corner_size, y1+corner_size], fill=line_color)
         else:  # 오른쪽 위 또는 오른쪽 아래 모서리
             draw.rectangle([x2-corner_size, y2-corner_size, x2+corner_size, y2+corner_size], fill=line_color)
-    
 
-    # 8. 선의 흐림 효과 (기존 코드)
+    # 6. 선의 흐림 효과 (기존 코드)
     if random.random() < config.line_blur_probability:
         line_image = Image.new('RGBA', (max(x1, x2) - min(x1, x2) + 10, max(y1, y2) - min(y1, y2) + 10), (0, 0, 0, 0))
         line_draw = ImageDraw.Draw(line_image)
@@ -206,7 +184,7 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
         blurred_line = line_image.filter(ImageFilter.GaussianBlur(radius=1))
         draw.bitmap((min(x1, x2)-5, min(y1, y2)-5), blurred_line)
 
-    # 9. 선의 투명도 변화
+    # 7. 선의 투명도 변화 (기존 코드)
     if random.random() < config.transparency_variation_probability:
         transparent_line = Image.new('RGBA', (max(x1, x2) - min(x1, x2) + 10, max(y1, y2) - min(y1, y2) + 10), (0, 0, 0, 0))
         transparent_draw = ImageDraw.Draw(transparent_line)
@@ -214,6 +192,56 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
         transparent_draw.line([(5, 5), (transparent_line.width-5, transparent_line.height-5)], 
                               fill=(r, g, b, random.randint(128, 255)), width=line_thickness)
         draw.bitmap((min(x1, x2)-5, min(y1, y2)-5), transparent_line, fill=None)
+
+    # 8. 점선 효과 (새로운 코드)
+    if random.random() < config.dotted_line_probability:
+        dash_length = random.randint(2, 5)
+        gap_length = random.randint(2, 5)
+        dx, dy = x2 - x1, y2 - y1
+        distance = (dx**2 + dy**2)**0.5
+        num_dashes = int(distance / (dash_length + gap_length))
+        for i in range(num_dashes):
+            start_t = i * (dash_length + gap_length) / distance
+            end_t = start_t + dash_length / distance
+            start_x, start_y = int(x1 + dx * start_t), int(y1 + dy * start_t)
+            end_x, end_y = int(x1 + dx * end_t), int(y1 + dy * end_t)
+            draw.line([(start_x, start_y), (end_x, end_y)], fill=line_color, width=line_thickness)
+
+    # 9. 선의 색상 변화 (새로운 코드)
+    if random.random() < config.color_variation_probability:
+        num_segments = random.randint(3, 7)
+        for i in range(num_segments):
+            segment_start = (
+                int(x1 + (x2 - x1) * i / num_segments),
+                int(y1 + (y2 - y1) * i / num_segments)
+            )
+            segment_end = (
+                int(x1 + (x2 - x1) * (i + 1) / num_segments),
+                int(y1 + (y2 - y1) * (i + 1) / num_segments)
+            )
+            r, g, b = line_color
+            variation = random.randint(-20, 20)
+            segment_color = (max(0, min(255, r + variation)),
+                             max(0, min(255, g + variation)),
+                             max(0, min(255, b + variation)))
+            draw.line([segment_start, segment_end], fill=segment_color, width=line_thickness)
+
+    # 10. 선의 텍스처 효과 (수정된 코드)
+    if random.random() < config.texture_effect_probability:
+        texture_line = Image.new('RGBA', (max(x1, x2) - min(x1, x2) + 10, max(y1, y2) - min(y1, y2) + 10), (0, 0, 0, 0))
+        texture_draw = ImageDraw.Draw(texture_line)
+        texture_draw.line([(5, 5), (texture_line.width-5, texture_line.height-5)], fill=line_color, width=line_thickness)
+        for _ in range(100):
+            x = random.randint(0, texture_line.width-1)
+            y = random.randint(0, texture_line.height-1)
+            if texture_line.getpixel((x, y))[3] > 0:  # 알파 채널이 0보다 큰 경우 (선이 있는 부분)
+                texture_line.putpixel((x, y), (random.randint(max(0, r-30), min(255, r+30)),
+                                               random.randint(max(0, g-30), min(255, g+30)),
+                                               random.randint(max(0, b-30), min(255, b+30)),
+                                               255))
+        draw.bitmap((min(x1, x2)-5, min(y1, y2)-5), texture_line, fill=None)
+
+
 def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int, int, int], config: TableGenerationConfig, count=0) -> Tuple[int, int, int]:
     """선 색상에 변화를 주되, 배경색과의 대비를 유지합니다."""
     r, g, b = line_color
@@ -235,90 +263,36 @@ def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int,
         return line_color
 
 
-def draw_rounded_overflow(draw, cell, line_color, border_width, corner_radius, table_bbox):
-    x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-    overflow_y1 = cell.get('overflow_y1', y1)
-    overflow_y2 = cell.get('overflow_y2', y2)
-    direction = cell['overflow']['direction']
-
-    if direction in ['up', 'both']:
-        draw_rounded_rectangle(draw, [x1, overflow_y1, x2, y1], corner_radius, table_bbox, outline=line_color, width=border_width)
-    if direction in ['down', 'both']:
-        draw_rounded_rectangle(draw, [x1, y2, x2, overflow_y2], corner_radius, table_bbox, outline=line_color, width=border_width)
-
-def draw_regular_overflow(draw, cell, line_color, border_width):
-    x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-    overflow_y1 = cell.get('overflow_y1', y1)
-    overflow_y2 = cell.get('overflow_y2', y2)
-    direction = cell['overflow']['direction']
-
-    if direction in ['up', 'both']:
-        draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=border_width)
-    if direction in ['down', 'both']:
-        draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=border_width)
-    draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=border_width)
-    draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=border_width)
 def redraw_cell_with_overflow(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int], 
                               table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> None:
-    # cell_type 확인 및 업데이트
-    cell_type = cell.get('cell_type', 'normal_cell')
-    if cell_type == 'merged_cell':
-        cell['cell_type'] = 'overflow_cell'
-    elif cell_type == 'normal_cell':
-        cell['cell_type'] = 'overflow_cell'
-
-    table_logger.debug(f"Redrawing cell with overflow. Updated cell type: {cell['cell_type']}")
-
     x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-    
-    is_gray = cell.get('is_gray', True)
-    
-    if is_gray:
-        cell_bg_color = config.get_random_gray_color() or bg_color
-    else:
-        cell_bg_color = bg_color
-
-    direction = cell['overflow']['direction']
+    overflow = cell['overflow']
+    direction = overflow['direction']
     overflow_y1 = cell.get('overflow_y1', y1)
     overflow_y2 = cell.get('overflow_y2', y2)
     
-    # 둥근 모서리 설정
-    is_rounded = config.enable_rounded_corners and random.random() < config.rounded_corner_probability
-    corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius) if is_rounded else 0
-    
-    # 셀 배경 다시 그리기 (오버플로우 영역 포함)
-    if is_rounded:
-        draw_rounded_rectangle(draw, [x1, overflow_y1, x2, overflow_y2], corner_radius, table_bbox,
-                               fill=cell_bg_color, outline=None)
-    else:
-        draw.rectangle([x1, overflow_y1, x2, overflow_y2], fill=cell_bg_color)
+    cell_bg_color = cell.get('bg_color', bg_color)
+    line_thickness = config.get_random_line_thickness()
 
-    # 셀 테두리 다시 그리기
-    border_width = config.min_line_thickness
+    # 오버플로우 방향에 따라 원래 셀의 선 지우기
+    if direction in ['up', 'both']:
+        draw.line([(x1, y1), (x2, y1)], fill=cell_bg_color, width=line_thickness)
+    if direction in ['down', 'both']:
+        draw.line([(x1, y2), (x2, y2)], fill=cell_bg_color, width=line_thickness)
 
-    if is_rounded:
-        # 둥근 모서리로 테두리 그리기
-        draw_rounded_rectangle(draw, [x1, overflow_y1, x2, overflow_y2], corner_radius, table_bbox,
-                               outline=line_color, width=border_width)
-    else:
-        # 일반 테두리 그리기
-        # 왼쪽과 오른쪽 테두리
-        draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=border_width)
-        draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=border_width)
+    # 오버플로우 영역 배경 그리기
+    if direction in ['up', 'both']:
+        draw.rectangle([x1, overflow_y1, x2, y1], fill=cell_bg_color)
+    if direction in ['down', 'both']:
+        draw.rectangle([x1, y2, x2, overflow_y2], fill=cell_bg_color)
 
-        # 위쪽 테두리
-        if direction in ['up', 'both']:
-            draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=border_width)
-        else:
-            draw.line([(x1, y1), (x2, y1)], fill=line_color, width=border_width)
-
-        # 아래쪽 테두리
-        if direction in ['down', 'both']:
-            draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=border_width)
-        else:
-            draw.line([(x1, y2), (x2, y2)], fill=line_color, width=border_width)
-
-    table_logger.debug(f"Finished redrawing cell with overflow: {cell}")
+    # 오버플로우 영역 테두리 그리기
+    if direction in ['up', 'both']:
+        draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=line_thickness)
+    if direction in ['down', 'both']:
+        draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=line_thickness)
+    draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=line_thickness)
+    draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=line_thickness)
 
 
 def draw_outer_border(draw: ImageDraw.Draw, table_bbox: List[int], line_color: Tuple[int, int, int]) -> None:
@@ -332,36 +306,54 @@ def draw_divider_lines(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List
     rows = sorted(set(cell['row'] for cell in cells))
     cols = sorted(set(cell['col'] for cell in cells))
     
+    def has_special_cells(cell_list):
+        return any('is_merged' in cell and cell['is_merged'] for cell in cell_list) or \
+               any('overflow' in cell and cell['overflow'] for cell in cell_list)
+
     # 수평 구분선
-    for i, row in enumerate(rows):
-        if i == 0 or i == len(rows) - 1:  # 첫 행과 마지막 행은 제외
-            continue
+    for i in range(1, len(rows)):
+        current_row = rows[i]
+        previous_row = rows[i-1]
         
-        # 현재 행의 셀들 확인
-        row_cells = [cell for cell in cells if cell['row'] == row]
+        # 현재 행과 이전 행의 셀들 확인
+        current_row_cells = [cell for cell in cells if cell['row'] == current_row]
+        previous_row_cells = [cell for cell in cells if cell['row'] == previous_row]
         
-        # 오버플로우가 있는 셀이 있는지 확인
-        has_overflow = any(cell.get('overflow') for cell in row_cells)
-        
-        if not has_overflow and random.random() < config.horizontal_divider_probability:
-            y = sum(cell['y2'] for cell in row_cells) // len(row_cells)
-            thickness = random.randint(*config.divider_line_thickness_range)
-            draw_imperfect_line(draw, (x1, y), (x2, y), line_color, thickness, config)
+        if not has_special_cells(current_row_cells + previous_row_cells) and random.random() < config.horizontal_divider_probability:
+            y = (max(cell['y1'] for cell in current_row_cells) + 
+                 min(cell['y2'] for cell in previous_row_cells)) // 2
+            
+            # 실제 열이 존재하는 구간에서만 선 그리기
+            for col in cols:
+                col_cells = [cell for cell in current_row_cells + previous_row_cells if cell['col'] == col]
+                if col_cells and not has_special_cells(col_cells):
+                    x_start = min(cell['x1'] for cell in col_cells)
+                    x_end = max(cell['x2'] for cell in col_cells)
+                    thickness = random.randint(*config.divider_line_thickness_range)
+                    draw_imperfect_line(draw, (x_start, y), (x_end, y), line_color, thickness, config)
     
     # 수직 구분선
-    for i, col in enumerate(cols):
-        if i == 0 or i == len(cols) - 1:  # 첫 열과 마지막 열은 제외
-            continue
-        # 현재 행의 셀들 확인
-        col_cells = [cell for cell in cells if cell['col'] == col]
+    for i in range(1, len(cols)):
+        current_col = cols[i]
+        previous_col = cols[i-1]
         
-        # 오버플로우가 있는 셀이 있는지 확인
-        has_overflow = any(cell.get('overflow') for cell in col_cells)
+        # 현재 열과 이전 열의 셀들 확인
+        current_col_cells = [cell for cell in cells if cell['col'] == current_col]
+        previous_col_cells = [cell for cell in cells if cell['col'] == previous_col]
         
-        if not has_overflow and random.random() < config.vertical_divider_probability:
-            x = sum(cell['x2'] for cell in cells if cell['col'] == col) // len([cell for cell in cells if cell['col'] == col])
-            thickness = random.randint(*config.divider_line_thickness_range)
-            draw_imperfect_line(draw, (x, y1), (x, y2), line_color, thickness, config)
+        if not has_special_cells(current_col_cells + previous_col_cells) and random.random() < config.vertical_divider_probability:
+            x = (max(cell['x1'] for cell in current_col_cells) + 
+                 min(cell['x2'] for cell in previous_col_cells)) // 2
+            
+            # 실제 행이 존재하는 구간에서만 선 그리기
+            for row in rows:
+                row_cells = [cell for cell in current_col_cells + previous_col_cells if cell['row'] == row]
+                if row_cells and not has_special_cells(row_cells):
+                    y_start = min(cell['y1'] for cell in row_cells)
+                    y_end = max(cell['y2'] for cell in row_cells)
+                    thickness = random.randint(*config.divider_line_thickness_range)
+                    draw_imperfect_line(draw, (x, y_start), (x, y_end), line_color, thickness, config)
+
 def draw_rounded_rectangle(draw, xy, corner_radius, table_bbox, fill=None, outline=None, width=1):
     x1, y1, x2, y2 = xy
     table_x1, table_y1, table_x2, table_y2 = table_bbox

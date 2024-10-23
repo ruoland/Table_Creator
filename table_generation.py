@@ -168,7 +168,6 @@ def create_table(image_width, image_height, margins, title_height, config: Table
             ]
         cells = validate_cell_coordinates(cells, table_bbox)
         log_cell_coordinates(cells, "Final validation")
-        config.dataset_counter.update_counts(cells)
         table_logger.debug(f"create_table 종료: 생성된 셀 수 {len(cells)}")
         return cells, table_bbox, is_table_rounded, table_corner_radius    
     except Exception as e:

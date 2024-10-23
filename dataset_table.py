@@ -106,7 +106,6 @@ def draw_rectangle_with_selective_sides(draw, bbox, color, width, radius= 0, dra
             draw.arc([x1 - radius * 2, y1 - radius * 2, x1, y1], 0, 90, fill=color, width=width)
         else:
             draw.line([(x1, y0), (x1, y1)], fill=color, width=width)
-
 def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int], 
                bg_color: Tuple[int, int, int], has_gap: bool, is_imperfect: bool, 
                config: TableGenerationConfig, is_table_rounded: bool, table_corner_radius: int) -> None:
@@ -118,7 +117,6 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
     can_draw_outer_line = random.random() < config.table_side_line_probability
     corner_radius = 0
     
-
     if config.enable_rounded_corners and random.random() < config.rounded_corner_probability:
         corner_radius = random.randint(config.min_corner_radius, config.max_corner_radius)
     
@@ -129,24 +127,30 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
 
     draw_rectangle_with_selective_sides(draw, table_bbox, line_color, line_thickness, corner_radius, can_draw_outer_line, can_draw_outer_line)
 
-
+    # 일반 셀 그리기
     for cell in cells:
-        if not strict_validate_cell(cell):
-            table_logger.warning(f"Invalid cell: {cell}")
-            continue
+        if not cell.get('overflow'):
+            if not strict_validate_cell(cell):
+                table_logger.warning(f"Invalid cell: {cell}")
+                continue
 
-        cell_bg_color = bg_color
-        try:
-            draw_cell(draw, cell, line_color, is_imperfect, table_bbox, cell_bg_color, config)
-        except Exception as e:
-            table_logger.error(f"Error drawing cell {cell}: {str(e)}")
-            table_logger.error(f"Traceback:\n{traceback.format_exc()}")
+            is_gray = cell.get('is_gray', False)
+            cell_bg_color = config.get_random_gray_color(bg_color) or bg_color if config.enable_gray_cells and is_gray else bg_color
 
-    # 오버플로우된 셀 다시 그리기
+            try:
+                draw_cell(draw, cell, line_color, is_imperfect, table_bbox, cell_bg_color, config)
+            except Exception as e:
+                table_logger.error(f"Error drawing cell {cell}: {str(e)}")
+                table_logger.error(f"Traceback:\n{traceback.format_exc()}")
+
+    # 셀 이동 효과 적용
+    apply_cell_shift_effect(draw, cells, bg_color, line_color, config)
+
+    # 오버플로우된 셀 그리기
     for cell in cells:
         if cell.get('overflow'):
             try:
-                redraw_cell_with_overflow(draw, cell, line_color, table_bbox, cell_bg_color, config)
+                redraw_cell_with_overflow(draw, cell, line_color, table_bbox, bg_color, config)
             except Exception as e:
                 table_logger.error(f"Error redrawing cell with overflow {cell}: {str(e)}")
     
@@ -156,3 +160,68 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
     # 구분선 그리기
     if config.enable_divider_lines:
         draw_divider_lines(draw, cells, table_bbox, line_color, config)
+def apply_cell_shift_effect(draw: ImageDraw.Draw, cells: List[dict], bg_color: Tuple[int, int, int], 
+                            line_color: Tuple[int, int, int], config: TableGenerationConfig):
+    # 셀을 행과 열 기준으로 정렬
+    sorted_cells = sorted(cells, key=lambda c: (c['row'], c['col']))
+    
+    for i, cell in enumerate(sorted_cells):
+        if (not cell.get('overflow') and 
+            not cell.get('is_header') and 
+            random.random() < config.cell_shift_down_probability):
+            
+            x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
+            offset = random.randint(1, 3)
+            is_gray = cell.get('is_gray', False)
+            cell_bg_color = config.get_random_gray_color(bg_color) or bg_color if config.enable_gray_cells and is_gray else bg_color
+            
+            # 위쪽 셀 확인
+            above_cell = next((c for c in sorted_cells[:i] if c['row'] == cell['row'] - 1 and c['col'] == cell['col']), None)
+            
+            # 아래쪽 셀 확인
+            below_cell = next((c for c in sorted_cells[i+1:] if c['row'] == cell['row'] + 1 and c['col'] == cell['col']), None)
+            
+            # 위쪽 셀이 있고, 이미 아래로 이동된 경우 고려
+            if above_cell and above_cell.get('shifted_down'):
+                y1 = above_cell['shifted_y2']
+            
+            # 위쪽 선을 배경색으로 덮기 (위쪽 셀의 아래 테두리 유지)
+            draw.line([(x1, y1+1), (x2, y1+1)], fill=bg_color, width=offset-1)
+            
+            # 셀 배경 그리기 (약간 아래로 이동)
+            draw.rectangle([x1, y1 + offset, x2, y2], fill=cell_bg_color)
+            
+            # 아래쪽 선 그리기 (아래 셀이 없거나 이동되지 않은 경우에만)
+            if not below_cell or not below_cell.get('shifted_down'):
+                draw.line([(x1, y2), (x2, y2)], fill=line_color, width=config.get_random_line_thickness())
+            
+            # 좌우 선 다시 그리기
+            line_thickness = config.get_random_line_thickness()
+            draw.line([(x1, y1), (x1, y2)], fill=line_color, width=line_thickness)
+            draw.line([(x2, y1), (x2, y2)], fill=line_color, width=line_thickness)
+            
+            # 이동된 셀의 새로운 y 좌표 저장
+            cell['shifted_y1'] = y1 + offset
+            cell['shifted_y2'] = y2
+            cell['shifted_down'] = True
+
+    # 모든 셀의 테두리 다시 그리기
+    for i, cell in enumerate(sorted_cells):
+        x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
+        if cell.get('shifted_down'):
+            y1 = cell['shifted_y1']
+            y2 = cell['shifted_y2']
+        
+        # 위쪽 테두리 (위 셀이 이동되지 않았거나 현재 셀이 첫 번째 행인 경우에만)
+        above_cell = next((c for c in sorted_cells[:i] if c['row'] == cell['row'] - 1 and c['col'] == cell['col']), None)
+        if not above_cell or not above_cell.get('shifted_down'):
+            draw.line([(x1, y1), (x2, y1)], fill=line_color, width=config.get_random_line_thickness())
+        
+        # 아래쪽 테두리 (아래 셀이 없거나 이동되지 않은 경우에만)
+        below_cell = next((c for c in sorted_cells[i+1:] if c['row'] == cell['row'] + 1 and c['col'] == cell['col']), None)
+        if not below_cell or not below_cell.get('shifted_down'):
+            draw.line([(x1, y2), (x2, y2)], fill=line_color, width=config.get_random_line_thickness())
+        
+        # 좌우 테두리
+        draw.line([(x1, y1), (x1, y2)], fill=line_color, width=config.get_random_line_thickness())
+        draw.line([(x2, y1), (x2, y2)], fill=line_color, width=config.get_random_line_thickness())

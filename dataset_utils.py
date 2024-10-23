@@ -21,46 +21,39 @@ COMMON_WORD_PROBABILITY = config.common_word_probability
 from typing import Tuple
 import random
 def get_line_color(bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> Tuple[int, int, int]:
-    """배경색에 따라 적절한 선 색상을 반환합니다."""
+    """그레이스케일 이미지를 위한 다양한 명도의 선 색상을 반환합니다."""
     try:
-        brightness = sum(bg_color) / 3
+        bg_brightness = sum(bg_color) / 3
     except (TypeError, ValueError):
-        config.table_logger.warning(f"Invalid background color format: {bg_color}. Using default.")
-        return config.line_colors['black']
+        config.table_logger.warning(f"잘못된 배경색 형식: {bg_color}. 기본값을 사용합니다.")
+        return (128, 128, 128)
 
-    # 색상 선택을 위한 가중치 조정
-    weights = config.line_color_weights.copy()
-    
-    # 배경이 어두운 경우 밝은 색상의 가중치를 높임
-    if brightness < config.color_brightness_threshold:
-        weights['light_gray'] *= 2
-        weights['gray'] *= 1.5
-        weights['black'] = 0  # 어두운 배경에는 검은색 선을 사용하지 않음
-    else:
-        weights['dark_gray'] *= 1.5
-        weights['black'] *= 2
-        weights['light_gray'] = 0  # 밝은 배경에는 밝은 회색 선을 사용하지 않음
+    # 다양한 명도의 회색 옵션 (0: 검정, 255: 흰색)
+    gray_options = [
+        ('very_dark', 20),
+        ('dark', 50),
+        ('medium_dark', 80),
+        ('medium', 128),
+        ('medium_light', 170),
+        ('light', 200),
+        ('very_light', 230)
+    ]
 
-    # 가중치에 따라 색상 선택
-    available_colors = [color for color, weight in weights.items() if weight > 0]
-    color_weights = [weights[color] for color in available_colors]
-    
-    color_name = random.choices(available_colors, weights=color_weights, k=1)[0]
-    
-    # 선택된 색상 반환
-    line_color = config.line_colors[color_name]
-    
-    # 배경색과의 대비 확인
-    while not is_sufficient_contrast(bg_color, line_color):
-        available_colors.remove(color_name)
-        if not available_colors:
-            config.table_logger.warning("No suitable line color found. Using default contrast color.")
-            return get_contrast_color(bg_color)
-        color_weights = [weights[color] for color in available_colors]
-        color_name = random.choices(available_colors, weights=color_weights, k=1)[0]
-        line_color = config.line_colors[color_name]
-    
-    return (128,128,128)
+    # 배경 밝기에 따라 가중치 조정
+    weights = []
+    for _, gray_value in gray_options:
+        contrast = abs(bg_brightness - gray_value)
+        weight = min(contrast, 100)  # 최대 가중치를 100으로 제한
+        weights.append(weight)
+
+    # 가중치에 따라 회색 선택
+    selected_gray = random.choices(gray_options, weights=weights, k=1)[0]
+    gray_value = selected_gray[1]
+
+    # 약간의 변동성 추가 (±10)
+    gray_value = max(0, min(255, gray_value + random.randint(-10, 10)))
+
+    return (gray_value, gray_value, gray_value)
 
 def is_sufficient_contrast(bg_color: Tuple[int, int, int], line_color: Tuple[int, int, int]) -> bool:
     """배경색과 선 색상 간의 대비가 충분한지 확인합니다."""
@@ -68,11 +61,6 @@ def is_sufficient_contrast(bg_color: Tuple[int, int, int], line_color: Tuple[int
     line_brightness = sum(line_color) / 3
     
     return abs(bg_brightness - line_brightness) > 50  # 임계값은 조정 가능
-
-def get_contrast_color(bg_color: Tuple[int, int, int]) -> Tuple[int, int, int]:
-    """배경색과 대비되는 색상을 반환합니다."""
-    brightness = sum(bg_color) / 3
-    return (0, 0, 0) if brightness > 127 else (255, 255, 255)
 
 
 def random_text(min_length: int = 1, max_length: int = 10) -> str:

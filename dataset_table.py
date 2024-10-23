@@ -11,7 +11,6 @@ from dataset_draw_preprocess import apply_realistic_effects
 from table_generation import generate_coco_annotations
 from logging_config import  table_logger
 import traceback
-import traceback
 DEBUG = False
 def log_trace():
     if DEBUG:
@@ -23,10 +22,22 @@ def log_trace():
                 table_logger.debug(f"    {line.strip()}")
 
 
-def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, is_imperfect=False, config:TableGenerationConfig=None):
+def generate_random_resolution() -> Tuple[Tuple[int, int], Tuple[int, int, int, int]]:
+    """랜덤한 이미지 해상도와 여백을 생성합니다."""
+    width = random.randint(config.min_image_width, config.max_image_width)
+    height = random.randint(config.min_image_height, config.max_image_height)
+    margin_left = random.randint(config.min_margin, config.max_margin)
+    margin_right = random.randint(config.min_margin, config.max_margin)
+    margin_top = random.randint(config.min_margin, config.max_margin)
+    margin_bottom = random.randint(config.min_margin, config.max_margin)
+    width = width - (width % 32) + margin_left + margin_right
+    height = height - (height % 32) + margin_top + margin_bottom
+    return (width, height), (margin_left, margin_top, margin_right, margin_bottom)
+def generate_image_and_labels(image_id, bg_mode, has_gap, is_imperfect=False, config:TableGenerationConfig=None):
     log_trace()
     table_logger.debug(f"generate_image_and_labels 시작: 이미지 ID {image_id}")
-    
+    resolution, margins = generate_random_resolution()
+
     try:
         image_width, image_height = resolution
         
@@ -44,17 +55,19 @@ def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, i
         if config.enable_shapes: #도형
             max_height = max(title_height, table_bbox[1])
             add_shapes(img, 0, title_height, image_width, max_height, bg_color)
-        validate_cell_structure(table.cells, "테이블 생성 후")
         
         draw = ImageDraw.Draw(img)
-        draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect, config, is_table_rounded, table_corner_radius)
+        cells = table.cells
+   
+        draw_table(draw, cells, table.table_bbox, bg_color, has_gap, is_imperfect, config, is_table_rounded, table_corner_radius)
+
         if config.enable_text_generation or config.enable_shapes:
-            add_content_to_cells(img, cells, random.choice(config.fonts), bg_color)
+            add_content_to_cells(img, cells, random.choice(config.fonts))
 
         if is_imperfect:
             img = apply_imperfections(img, cells)
             validate_cell_structure(cells, "불완전성 적용 후")
-        img, cells, table_bbox, new_width, new_height = apply_realistic_effects(img, cells, table_bbox, config)
+        img, cells, table_bbox, new_width, new_height = apply_realistic_effects(img, table.cells, table.table_bbox, config)
         validate_cell_structure(cells, "현실적 효과 적용 후")
 
         coco_annotations = generate_coco_annotations(cells, table_bbox, image_id, config)
@@ -159,7 +172,7 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
 
     # 구분선 그리기
     if config.enable_divider_lines:
-        draw_divider_lines(draw, cells, table_bbox, line_color, config)
+        draw_divider_lines(draw, cells, line_color, config)
 def apply_cell_shift_effect(draw: ImageDraw.Draw, cells: List[dict], bg_color: Tuple[int, int, int], 
                             line_color: Tuple[int, int, int], config: TableGenerationConfig):
     # 셀을 행과 열 기준으로 정렬

@@ -239,26 +239,7 @@ def draw_imperfect_line(draw: ImageDraw.Draw, start: Tuple[int, int], end: Tuple
                                                255))
         draw.bitmap((min(x1, x2)-5, min(y1, y2)-5), texture_line, fill=None)
 
-
-def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int, int, int], config: TableGenerationConfig, count=0) -> Tuple[int, int, int]:
-    """선 색상에 변화를 주되, 배경색과의 대비를 유지합니다."""
-    r, g, b = line_color
     
-    # 각 채널별로 독립적으로 변화를 줍니다
-    varied_color = (
-        max(0, min(255, r + random.randint(-40, 40))),
-        max(0, min(255, g + random.randint(-40, 40))),
-        max(0, min(255, b + random.randint(-40, 40)))
-    )
-    
-    # 배경색과의 대비를 확인합니다
-    if is_sufficient_contrast(bg_color, varied_color):
-        return varied_color
-    elif count < 3:
-        # 대비가 충분하지 않으면 다시 계산합니다.
-        return apply_color_variation(line_color, bg_color, config, count+1)
-    else: #3번 시도했지만 실패한 경우 원본으로 반환합니다.
-        return line_color
 def redraw_cell_with_overflow(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int], 
                               table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> None:
     x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
@@ -309,9 +290,8 @@ def draw_outer_border(draw: ImageDraw.Draw, table_bbox: List[int], line_color: T
         outer_line_thickness = random.randint(config.min_outer_line_thickness, config.max_outer_line_thickness)
         draw.rectangle(table_bbox, outline=line_color, width=outer_line_thickness)
 
-def draw_divider_lines(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int], 
+def draw_divider_lines(draw: ImageDraw.Draw, cells: List[dict], 
                        line_color: Tuple[int, int, int], config: TableGenerationConfig):
-    x1, y1, x2, y2 = table_bbox
     rows = sorted(set(cell['row'] for cell in cells))
     cols = sorted(set(cell['col'] for cell in cells))
     

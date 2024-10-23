@@ -7,12 +7,9 @@ import os
 from io import BytesIO
 from typing import List, Dict, Any
 from logging_config import table_logger
-from dataset_config import (TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, 
+from dataset_config import (CELL_CATEGORY_ID, TABLE_CATEGORY_ID, 
                             COLUMN_CATEGORY_ID, ROW_CATEGORY_ID, MERGED_CELL_CATEGORY_ID, 
                             OVERFLOW_CELL_CATEGORY_ID, HEADER_COLUMN_CATEGORY_ID, HEADER_ROW_CATEGORY_ID)
-
-# 메모리 사용량 모니터링 함수import os
-
 
 def log_memory_usage():
     process = psutil.Process()
@@ -36,7 +33,6 @@ def to_python_type(obj: Any) -> Any:
         return str(obj)
 def save_subset_results(output_dir: str, subset: str, dataset_info: List[Dict[str, Any]], coco_annotations: List[Dict[str, Any]]) -> None:
     annotation_file = os.path.join(output_dir, f'{subset}_annotations.json')
-    
     try:
         with open(annotation_file, 'w') as f:
             f.write('{\n"images": [\n')

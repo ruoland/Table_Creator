@@ -123,7 +123,7 @@ def add_dots(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, color: Tu
                       (dot_x+dot_size, dot_y+dot_size)], 
                      fill=color)
 def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str, 
-                         bg_color: Tuple[int, int, int], empty_cell_ratio: float = config.empty_cell_ratio) -> None:
+                         empty_cell_ratio: float = config.empty_cell_ratio) -> None:
     draw = ImageDraw.Draw(img)
     width, height = img.size
     for cell in cells:

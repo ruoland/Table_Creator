@@ -8,6 +8,8 @@ from dataset_constant import *
 from logging_config import  get_memory_handler, table_logger
 
 from typing import Tuple
+import random
+
 
 # config 객체를 통해 상수 관리
 COLOR_BRIGHTNESS_THRESHOLD = config.color_brightness_threshold
@@ -18,8 +20,7 @@ LIGHT_MEDIUM_GRAY_RANGE = config.light_medium_gray_range
 FADED_COLOR_PROBABILITY = config.faded_color_probability
 CLASS_INFO_PROBABILITY = config.class_info_probability
 COMMON_WORD_PROBABILITY = config.common_word_probability
-from typing import Tuple
-import random
+
 def get_line_color(bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> Tuple[int, int, int]:
     """그레이스케일 이미지를 위한 다양한 명도의 선 색상을 반환합니다."""
     try:
@@ -63,6 +64,14 @@ def is_sufficient_contrast(bg_color: Tuple[int, int, int], line_color: Tuple[int
     return abs(bg_brightness - line_brightness) > 50  # 임계값은 조정 가능
 
 
+
+def validate_all_cells(cells, table_bbox, stage_name):
+    for cell in cells:
+        if cell['x1'] >= cell['x2'] or cell['y1'] >= cell['y2']:
+            table_logger.warning(f"Invalid cell coordinates detected after {stage_name}: {cell}")
+        if cell['x1'] < table_bbox[0] or cell['x2'] > table_bbox[2] or cell['y1'] < table_bbox[1] or cell['y2'] > table_bbox[3]:
+            table_logger.warning(f"Cell coordinates out of table bounds after {stage_name}: {cell}")
+    return cells
 def random_text(min_length: int = 1, max_length: int = 10) -> str:
     """랜덤한 텍스트를 생성합니다."""
     if random.random() < CLASS_INFO_PROBABILITY:
@@ -95,17 +104,6 @@ def is_overlapping(area1: Tuple[int, int, int, int], area2: Tuple[int, int, int,
     return not (area1[2] <= area2[0] or area1[0] >= area2[2] or
                 area1[3] <= area2[1] or area1[1] >= area2[3])
 
-def generate_random_resolution() -> Tuple[Tuple[int, int], Tuple[int, int, int, int]]:
-    """랜덤한 이미지 해상도와 여백을 생성합니다."""
-    width = random.randint(config.min_image_width, config.max_image_width)
-    height = random.randint(config.min_image_height, config.max_image_height)
-    margin_left = random.randint(config.min_margin, config.max_margin)
-    margin_right = random.randint(config.min_margin, config.max_margin)
-    margin_top = random.randint(config.min_margin, config.max_margin)
-    margin_bottom = random.randint(config.min_margin, config.max_margin)
-    width = width - (width % 32) + margin_left + margin_right
-    height = height - (height % 32) + margin_top + margin_bottom
-    return (width, height), (margin_left, margin_top, margin_right, margin_bottom)
 def strict_validate_cell(cell: Dict[str, Any]) -> bool:
     if not isinstance(cell, dict):
         return False
@@ -118,14 +116,6 @@ def strict_validate_cell(cell: Dict[str, Any]) -> bool:
         return False
     return True
 
-def validate_cell(cell: Dict[str, Any], config: TableGenerationConfig) -> bool:
-    if not all(key in cell for key in ['x1', 'y1', 'x2', 'y2']):
-        return False
-    x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-    return (x2 > x1 and y2 > y1 and 
-            x2 - x1 >= config.min_cell_width and y2 - y1 >= config.min_cell_height and
-            x2 - x1 <= config.max_cell_width and y2 - y1 <= config.max_cell_height and
-            all(isinstance(coord, int) for coord in [x1, y1, x2, y2]))
 def validate_color(color: Union[int, Tuple[int, int, int]]) -> Tuple[int, int, int]:
     """색상의 유효성을 검사하고 올바른 형식으로 반환합니다."""
     if isinstance(color, int):

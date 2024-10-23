@@ -5,14 +5,13 @@ import random, sys
 from tqdm import tqdm
 import numpy as np
 from PIL import Image, ImageDraw
-from dataset_utils import generate_random_resolution
 from dataset_io import save_subset_results, compress_and_save_image
 from dataset_config import  TableGenerationConfig
 from dataset_table import generate_image_and_labels 
 from multiprocessing import Pool, cpu_count
 from logging_config import  table_logger
 
-def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio=0.8, num_processes=None, config=None):
+def batch_dataset(output_dir, total_num_images, train_ratio=0.8, num_processes=None, config=None):
     if num_processes is None:
         num_processes = cpu_count()
     
@@ -24,7 +23,6 @@ def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio
 
     tasks = []
     train_images = int(total_num_images * train_ratio)
-    val_images = total_num_images - train_images
 
     def create_tasks(start, end, subset):
         image_ids = list(range(start, end))
@@ -45,7 +43,7 @@ def batch_dataset(output_dir, total_num_images, imperfect_ratio=0.3, train_ratio
 
     all_dataset_info = {'train': [], 'val': []}
     all_coco_annotations = {'train': [], 'val': []}
-    
+
     for dataset_info, coco_annotations in results:
         subset = dataset_info[0]['subset'] if dataset_info else 'train'
         all_dataset_info[subset].extend(dataset_info)
@@ -76,9 +74,8 @@ def process_images(args: Tuple[List[int], str, str, float, TableGenerationConfig
         elif config.config_mode == 'None':
             config.disable_all_effects()
         table_logger.debug(f"Generating image {image_id}")
-        resolution, margins = generate_random_resolution()
         img, annotations, actual_width, actual_height = generate_image_and_labels(
-            image_id, resolution, margins,
+            image_id,
             random.choice(['light', 'dark']),
             random.choice([True, False]),
             random.random() < config.imperfect_ratio,

@@ -1,14 +1,9 @@
 import random
 from dataset_utils import is_overlapping
 from logging_config import table_logger
+from dataset_config import TableGenerationConfig
 
 
-def log_cell_coordinates(cells, stage):
-    table_logger.debug(f"=== Cell coordinates at {stage} ===")
-    for cell in cells:
-        table_logger.debug(f"Cell: row={cell['row']}, col={cell['col']}, x1={cell['x1']}, y1={cell['y1']}, x2={cell['x2']}, y2={cell['y2']}")
-    table_logger.debug("=" * 50)
-    
 def can_merge(config):
     if config.enable_cell_merging:
         if config.enable_horizontal_merge or config.enable_vertical_merge:
@@ -19,7 +14,7 @@ def can_merge(config):
     return False
 
 
-def create_merged_cell(cells, start_row, start_col, merge_rows, merge_cols, cols, config):
+def create_merged_cell(cells, start_row, start_col, merge_rows, merge_cols, cols, config: TableGenerationConfig):
     # total_rows = len(cells) // cols
     
     # # 병합 범위가 테이블을 벗어나지 않는지 확인
@@ -58,11 +53,16 @@ def create_merged_cell(cells, start_row, start_col, merge_rows, merge_cols, cols
         return None  # 최소 크기를 만족하지 않으면 None 반환
     
     return new_cell_info
+def merge_cells(cells, rows, cols, config):
+    if rows <= 3 or cols <= 3 or not can_merge(config):
+        return cells
+
+    merged_cells = perform_cell_merging(cells, rows, cols, config)
+    return merged_cells
 def perform_cell_merging(cells, rows, cols, config):
     merged_cells = cells.copy()
     merged_areas = []
     header_cells = []  # 헤더 셀들을 저장할 리스트
-    log_cell_coordinates(merged_cells, "Start of merge_cells")
     
     # 헤더 셀 식별 및 저장
     for cell in merged_cells:
@@ -394,12 +394,6 @@ def is_within_table_bounds(cell, table_bbox, direction, height_up, height_down):
             return False
     
     return True
-def merge_cells(cells, rows, cols, config, table_bbox):
-    if rows <= 3 or cols <= 3 or not can_merge(config):
-        return cells
-    
-    merged_cells = perform_cell_merging(cells, rows, cols, config)
-    return merged_cells
 
 
 def get_random_overflow_height(cell_height, config):
@@ -410,6 +404,7 @@ def get_random_overflow_height(cell_height, config):
         return max_height  # 또는 min_height, 상황에 따라 선택
     
     return random.randint(min_height, max_height)
+
 def apply_overflow_to_cells(candidates, cells, config, table_bbox):
     # 병합된 셀 먼저 처리
     merged_candidates = [cell for cell in candidates if cell.get('is_merged', False)]

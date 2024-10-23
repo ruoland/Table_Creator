@@ -1,7 +1,6 @@
 import random
 from typing import Dict
 from typing import Tuple
-import colorsys
 import random
 CELL_CATEGORY_ID = 0
 TABLE_CATEGORY_ID = 1
@@ -20,41 +19,7 @@ MIN_CELL_SIZE_FOR_CONTENT = 5
 # 클래스 비율 설정 추가
 
 class TableGenerationConfig:
-    simple_table_ratio: float = 0.6
-    medium_table_ratio: float = 0.3
-    complex_table_ratio: float = 0.1
 
-    
-    cell_type_ratios = {
-        'normal_cell': 0.70,
-        'merged_cell': 0.09,
-        'overflow_cell': 0.09
-    }
-
-    line_colors = {
-        'black': (0, 0, 0),
-        'dark_gray': (64, 64, 64),
-        'gray': (128, 128, 128),
-        'light_gray': (192, 192, 192),
-        'blue': (0, 0, 255),
-        'red': (255, 0, 0),
-    }
-    line_color_weights = {
-        'black': 0.6,
-        'dark_gray': 0.2,
-        'gray': 0.1,
-        'light_gray': 0.05,
-        'blue': 0.03,
-        'red': 0.02,
-    }
-
-    # 선 스타일 설정
-    line_style_weights = {
-        'solid': 0.7,
-        'dashed': 0.2,
-        'dotted': 0.1,
-    }
-    
     min_line_thickness: int = 1
     max_line_thickness: int = 5
     line_thickness_distribution: Dict[str, float] = {
@@ -63,14 +28,7 @@ class TableGenerationConfig:
         'thick': 0.2
     }
 
-    def __init__(self):
-        
-        # 테이블 유형 및 기본 설정
-        table_types = ['no_header', 'header_row', 'header_column', 'header_both']  # 가능한 테이블 유형들
-        self.table_type = random.choice(table_types)  # 랜덤으로 테이블 유형 선택
-        self.config_mode = 'Random'  # 설정 모드 (None 또는 Random)
-        self.total_images = 100  # 생성할 총 이미지 수
-        self.image_level = 5.6 # 1은 셀, 표, 행, 열만 탐지하고, 2는 헤더 행 열, 2.6는 적은 수의 병합 셀, 오버플로, 3.1부터는 병합된 셀과 오버플로우 약간씩, 4.1부터는 병합된 셀과 오버플로우 셀 많이, 5.1부터는 불완전한 표, 선 없는 셀, 색깔 셀에서 선 안 그리기, 등.
+    def setting_table(self):
         # 이미지 크기 및 해상도 설정
         self.min_image_width, self.max_image_width = 800, 2400  # 이미지 너비 범위
         self.min_image_height, self.max_image_height = 600, 2400  # 이미지 높이 범위
@@ -86,18 +44,54 @@ class TableGenerationConfig:
         self.min_cols, self.max_cols = 4, 10  # 열 수 범위
         self.min_rows, self.max_rows = 4, 10  # 행 수 범위
         self.min_table_width, self.min_table_height = 200, 100  # 최소 테이블 크기
-        self.total_rows = None  # 실제 행 수 (자동 설정)
-        self.total_cols = None  # 실제 열 수 (자동 설정)
-
-        # 셀 설정
+        # 여백 설정
+        self.min_margin, self.max_margin = 10, 100  # 여백 범위
+ 
+    def setting_cells(self):
         self.min_cell_width, self.max_cell_width = 5, 200  # 셀 너비 범위
         self.min_cell_height, self.max_cell_height = 5, 300  # 셀 높이 범위
         self.enable_cell_gap = True  # 셀 간격 사용 여부
         self.min_cell_gap, self.max_cell_gap = 0, 3  # 셀 간격 범위
         self.cell_no_border_probability = 0  # 셀에 테두리를 그리지 않을 확률
+    # 회색 셀 설정
+        self.enable_gray_cells = False  # 회색 셀 사용 여부
+        self.gray_cell_probability = 0.0  # 회색 셀 생성 확률
+        self.gray_color_range = (50, 220)  # 회색 색상 범위
+        self.no_border_gray_cell_probability = 0.0  # 회색 셀의 테두리 없음 확률
+        self.empty_cell_ratio = 0.1  # 빈 셀 비율
+
+                # 텍스트 생성 관련 설정
+        self.enable_text_generation = True  # 텍스트 생성 사용 여부
+        self.max_text_length = 50  # 최대 텍스트 길이
+        self.class_info_probability = 0.4  # 클래스 정보 포함 확률
+        self.common_word_probability = 0.5  # 일반 단어 사용 확률
         
-        
-        # 테두리 및 선 설정
+                # 셀 내용 유형 및 텍스트 위치 설정
+        self.cell_content_types = ['text', 'shapes', 'mixed']  # 셀 내용 유형
+        self.text_positions = ['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']  # 텍스트 위치 옵션
+
+    
+    def setting_cells_content(self):
+         # 셀 내용 설정
+        self.cell_content_types = ['text', 'shapes', 'mixed']  # 셀 내용 유형
+        self.text_positions = ['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']  # 텍스트 위치 옵션
+        self.enable_text_generation = True  # 텍스트 생성 사용 여부
+        self.max_text_length = 50  # 최대 텍스트 길이
+        self.class_info_probability = 0  # 클래스 정보 포함 확률
+        self.common_word_probability = 0.5  # 일반 단어 사용 확률
+        self.empty_cell = False
+        self.empty_cell_probability = 0.3
+    def setting_cells_overflow(self):
+         # 오버플로우 설정
+        self.enable_overflow = True  # 오버플로우 사용 여부
+        self.overflow_probability = 0.7  # 오버플로우 발생 확률
+        self.min_overflow_height = 3  # 최소 오버플로우 높이
+        self.max_overflow_height = 10  # 오버플로우 영향을 확인할 최대 행 수
+        self.overflow_only_row_probability = 0.1
+        self.default_row_height = 30
+        self.default_col_width = 100
+        self.row_overflow_probability = 0.4
+    def setting_lines(self):
         self.enable_divider_lines = True  # 구분선 사용 여부
         self.horizontal_divider_probability = 0.2  # 수평 구분선 확률
         self.vertical_divider_probability = 0.2  # 수직 구분선 확률
@@ -107,7 +101,9 @@ class TableGenerationConfig:
         self.min_line_thickness = max(1, random.randint(1, 3))  # 최소 선 두께
         self.max_line_thickness = max(1, random.randint(self.min_line_thickness + 2, 5))  # 최대 선 두께
         self.min_outer_line_thickness, self.max_outer_line_thickness = 1, 4  # 외곽선 두께 범위
-
+        # 스타일 설정
+        self.styles = ['thin', 'medium', 'thick', 'double']  # 선 스타일 옵션
+    def setting_rounded(self):
         # 모서리 및 형태 설정
         self.enable_rounded_corners = True  # 둥근 모서리 사용 여부
         self.rounded_corner_probability = 0.5  # 둥근 모서리 확률
@@ -117,46 +113,42 @@ class TableGenerationConfig:
         self.rounded_table_corner_probability = 0.7  # 테이블 모서리 둥글게 처리 확률
         self.min_table_corner_radius = 5  # 최소 테이블 모서리 반경
         self.max_table_corner_radius = 24  # 최대 테이블 모서리 반경
-
-        # 헤더 설정
-        self.header_row_height_factor = 1.0  # 헤더 행 높이 배수
-        self.header_col_width_factor = 1.0  # 헤더 열 너비 배수
-        self.no_side_borders_cells_probability = 0.2 # 양옆 선 없는 셀의 확률
-
-        # 여백 설정
-        self.min_margin, self.max_margin = 10, 100  # 여백 범위
-
+        
+    def setting_headers(self):# 헤더 설정
         # 제목 설정
         self.enable_title = True  # 제목 사용 여부
         self.min_title_size, self.max_title_size = 20, 40  # 제목 크기 범위
-
-        # 셀 내용 설정
-        self.cell_content_types = ['text', 'shapes', 'mixed']  # 셀 내용 유형
-        self.text_positions = ['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']  # 텍스트 위치 옵션
-        self.enable_text_generation = True  # 텍스트 생성 사용 여부
-        self.max_text_length = 50  # 최대 텍스트 길이
-        self.class_info_probability = 0  # 클래스 정보 포함 확률
-        self.common_word_probability = 0.5  # 일반 단어 사용 확률
-        self.empty_cell = False
-        self.empty_cell_probability = 0.3
-
-        # 오버플로우 설정
-        self.enable_overflow = True  # 오버플로우 사용 여부
-        self.overflow_probability = 0.7  # 오버플로우 발생 확률
-        self.min_overflow_height = 3  # 최소 오버플로우 높이
-        self.max_overflow_height = 10  # 오버플로우 영향을 확인할 최대 행 수
-        self.overflow_only_row_probability = 0.1
-        self.default_row_height = 30
-        self.default_col_width = 100
-        self.row_overflow_probability = 0.4
-        # 도형 설정
-        self.enable_shapes = True  # 도형 사용 여부
-        self.shape_types = ['rectangle', 'circle', 'triangle', 'line', 'arc', 'polygon']  # 사용 가능한 도형 유형
-        self.min_shape_size, self.max_shape_size = 5, 50  # 도형 크기 범위
-        self.min_shapes, self.max_shapes = 1, 5  # 도형 개수 범위
-        self.shape_line_width = 2  # 도형 선 두께
-
-       
+        
+        self.header_row_height_factor = 1.0  # 헤더 행 높이 배수
+        self.header_col_width_factor = 1.0  # 헤더 열 너비 배수
+        self.no_side_borders_cells_probability = 0.2 # 양옆 선 없는 셀의 확률
+        
+    def setting_imperfect(self):
+        
+                # 기타 설정
+        self.line_break_probability = 0.1  # 줄 바꿈 확률
+        self.line_thickness_variation_probability = 0.1  # 선 두께 변화 확률
+        
+        # 텍스처 및 불완전성 효과
+        self.texture_effect_probability = 0.1  # 텍스처 효과 적용 확률
+        self.line_blur_probability = 0.2  # 선 흐림 효과 적용 확률
+        self.irregular_thickness_probability = 0.0  # 불규칙한 선 두께 적용 확률
+        self.line_curve_probability = 0.3  # 곡선 효과 적용 확률
+        self.color_variation_probability = 0.2  # 색상 변화 적용 확률
+        self.end_imperfection_probability = 0.3  # 선 끝부분 불완전성 적용 확률
+        self.transparency_variation_probability = 0.2  # 투명도 변화 적용 확률
+        self.cell_shift_down_probability = 0.7 # 셀이 선을 뒤덮을 확률
+        
+        
+        # 불완전한 선 그리기 설정
+        self.enable_imperfect_lines = False  # 불완전한 선 사용 여부
+        self.imperfect_line_probability = {
+            'top': 1,    # 상단 선 그리기 확률
+            'bottom': 1, # 하단 선 그리기 확률
+            'left': 1,  # 좌측 선 그리기 확률
+            'right': 1  # 우측 선 그리기 확률
+        }
+    def setting_cell_merging(self):
         # 셀 병합 설정
         self.enable_cell_merging = True  # 셀 병합 사용 여부
         self.merged_cell_probability = 0.5  # 셀 병합 확률
@@ -165,7 +157,8 @@ class TableGenerationConfig:
         self.max_vertical_merge = 4  # 최대 수직 병합 수
         self.horizontal_merge_probability = 0.3  # 수평 병합 확률
         self.vertical_merge_probability = 0.3  # 수직 병합 확률
-
+    def setting_color(self):
+                
         # 색상 설정
         self.background_colors = {
             'light': {'white': (255, 255, 255)},
@@ -177,34 +170,17 @@ class TableGenerationConfig:
         self.medium_gray_range = (50, 150)  # 중간 회색 범위
         self.light_medium_gray_range = (110, 210)  # 밝은 중간 회색 범위
         self.faded_color_probability = 0.4  # 흐린 색상 사용 확률
-
-        # 불완전한 선 그리기 설정
-        self.enable_imperfect_lines = False  # 불완전한 선 사용 여부
-        self.imperfect_line_probability = {
-            'top': 1,    # 상단 선 그리기 확률
-            'bottom': 1, # 하단 선 그리기 확률
-            'left': 1,  # 좌측 선 그리기 확률
-            'right': 1  # 우측 선 그리기 확률
-        }
-
-        # 회색 셀 설정
-        self.enable_gray_cells = False  # 회색 셀 사용 여부
-        self.gray_cell_probability = 0.0  # 회색 셀 생성 확률
-        self.gray_color_range = (50, 220)  # 회색 색상 범위
-        self.no_border_gray_cell_probability = 0.0  # 회색 셀의 테두리 없음 확률
-
-        # 스타일 설정
-        self.styles = ['thin', 'medium', 'thick', 'double']  # 선 스타일 옵션
-        self.fonts = ['fonts/NanumGothic.ttf', 'fonts/SANGJU Dajungdagam.ttf', 'fonts/SOYO Maple Regular.ttf']  # 사용 가능한 폰트
-
-        # 불완전성 및 효과 설정
+    
+    def setting_table_imperfection(self):
+            # 불완전성 및 효과 설정
         self.enable_table_imperfections = True  # 테이블 불완전성 사용 여부
         self.imperfect_ratio = 0.3  # 불완전성 비율
         self.enable_cell_inside_imperfections = True  # 셀 내부 불완전성 사용 여부
         self.enable_random_lines = True  # 랜덤 선 사용 여부
         self.random_line_probability = 0.3  # 랜덤 선 생성 확률
         self.cell_imperfection_probability = 0.3  # 셀 불완전성 확률
-
+        
+    def setting_table_special(self):
         # 특수 효과 설정
         self.enable_noise = True  # 노이즈 효과 사용 여부
         self.noise_intensity_range = (0.01, 0.05)  # 노이즈 강도 범위
@@ -225,76 +201,44 @@ class TableGenerationConfig:
         self.shadow_size_ratio = 0.1  # 그림자 크기 비율
         self.shadow_gradient_strength = 1.0  # 그림자 그라데이션 강도
         self.table_crop_probability = 0.0 # 표 자를 확률, 잘라낼, 자르기, 잘라
-
-        # 기타 설정
-        self.empty_cell_ratio = 0.1  # 빈 셀 비율
-        self.enable_background_shapes = False  # 배경 도형 사용 여부
+        self.enable_background_shapes = False  # 배경 도형 사용 여부 <- 구현 필요
         self.background_shape_count = 20  # 배경에 추가할 도형 수
-        self.line_break_probability = 0.1  # 줄 바꿈 확률
-        self.line_thickness_variation_probability = 0.1  # 선 두께 변화 확률
-        self.corner_imperfection_probability = 0.1  # 모서리 불완전
-
-        # 텍스처 및 불완전성 효과
-        self.texture_effect_probability = 0.1  # 텍스처 효과 적용 확률
-        self.line_blur_probability = 0.2  # 선 흐림 효과 적용 확률
-        self.irregular_thickness_probability = 0.0  # 불규칙한 선 두께 적용 확률
-        self.line_curve_probability = 0.3  # 곡선 효과 적용 확률
-        self.color_variation_probability = 0.2  # 색상 변화 적용 확률
-        self.end_imperfection_probability = 0.3  # 선 끝부분 불완전성 적용 확률
-        self.transparency_variation_probability = 0.2  # 투명도 변화 적용 확률
-        self.cell_shift_down_probability = 0.7 # 셀이 선을 뒤덮을 확률
-        # 기타 설정
-        self.empty_cell_ratio = 0.1  # 빈 셀의 비율
-        self.enable_background_shapes = False  # 배경 도형 사용 여부
-        self.background_shape_count = 20  # 배경에 추가할 도형의 수
-
-        # 선 스타일 및 폰트 설정
-        self.styles = ['thin', 'medium', 'thick', 'double']  # 사용 가능한 선 스타일
-        self.fonts = ['fonts/NanumGothic.ttf', 'fonts/SANGJU Dajungdagam.ttf', 'fonts/SOYO Maple Regular.ttf']  # 사용 가능한 폰트
-
-        # 셀 내용 유형 및 텍스트 위치 설정
-        self.cell_content_types = ['text', 'shapes', 'mixed']  # 셀 내용 유형
-        self.text_positions = ['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']  # 텍스트 위치 옵션
-
-        # 텍스트 생성 관련 설정
-        self.enable_text_generation = True  # 텍스트 생성 사용 여부
-        self.max_text_length = 50  # 최대 텍스트 길이
-        self.class_info_probability = 0.4  # 클래스 정보 포함 확률
-        self.common_word_probability = 0.5  # 일반 단어 사용 확률
-
-        # 도형 관련 설정
+        
+        # 도형 설정
         self.enable_shapes = True  # 도형 사용 여부
         self.shape_types = ['rectangle', 'circle', 'triangle', 'line', 'arc', 'polygon']  # 사용 가능한 도형 유형
         self.min_shape_size, self.max_shape_size = 5, 50  # 도형 크기 범위
         self.min_shapes, self.max_shapes = 1, 5  # 도형 개수 범위
         self.shape_line_width = 2  # 도형 선 두께
-
-
-
-        # 불완전한 선 그리기 설정
-        self.enable_imperfect_lines = False  # 불완전한 선 사용 여부
-        self.imperfect_line_probability = {
-            'top': 0.9,    # 90% 확률로 상단 선 그리기
-            'bottom': 0.9, # 90% 확률로 하단 선 그리기
-            'left': 0.95,  # 95% 확률로 좌측 선 그리기
-            'right': 0.95  # 95% 확률로 우측 선 그리기
-        }
-
-        # 회색 셀 설정
-        self.enable_gray_cells = False  # 회색 셀 사용 여부
-        self.gray_cell_probability = 0.0  # 회색 셀 생성 확률
-        self.gray_color_range = (50, 220)  # 회색 색상 범위
-        self.no_border_gray_cell_probability = 0.0  # 회색 셀의 테두리 없음 확률
-
-
-
-        # 선 색상 설정
+    def __init__(self):
         
-        # 기타 설정
-        self.empty_cell_ratio = 0.1
-        self.enable_background_shapes = False
+        # 테이블 유형 및 기본 설정
+        table_types = ['no_header', 'header_row', 'header_column', 'header_both']  # 가능한 테이블 유형들
+        self.table_type = random.choice(table_types)  # 랜덤으로 테이블 유형 선택
+        self.config_mode = 'Random'  # 설정 모드 (None 또는 Random)
+        self.total_images = 100  # 생성할 총 이미지 수
+        self.image_level = 5.6 # 1은 셀, 표, 행, 열만 탐지하고, 2는 헤더 행 열, 2.6는 적은 수의 병합 셀, 오버플로, 3.1부터는 병합된 셀과 오버플로우 약간씩, 4.1부터는 병합된 셀과 오버플로우 셀 많이, 5.1부터는 불완전한 표, 선 없는 셀, 색깔 셀에서 선 안 그리기, 등.
+        self.total_rows = None  # 실제 행 수 (자동 설정)
+        self.total_cols = None  # 실제 열 수 (자동 설정)
+        self.fonts = ['fonts/NanumGothic.ttf', 'fonts/SANGJU Dajungdagam.ttf', 'fonts/SOYO Maple Regular.ttf']  # 사용 가능한 폰트
 
-        
+        self.setting_table(self)
+        self.setting_cells(self)
+        self.setting_lines(self)
+        self.setting_rounded(self)
+        self.setting_headers(self)
+        self.setting_cells_content(self)
+        self.setting_cells_overflow(self)
+        self.setting_imperfect(self)
+        self.setting_cell_merging(self)
+        self.setting_color(self)
+        self.setting_table_imperfection(self)
+        self.setting_table_special(self)
+        self.corner_imperfection_probability = 0.1  # 모서리 불완전
+        # 선 스타일 및 폰트 설정
+        self.styles = ['thin', 'medium', 'thick', 'double']  # 사용 가능한 선 스타일
+        self.fonts = ['fonts/NanumGothic.ttf', 'fonts/SANGJU Dajungdagam.ttf', 'fonts/SOYO Maple Regular.ttf']  # 사용 가능한 폰트
+
     def set_table_dimensions(self):
         """실제 테이블 크기를 설정합니다."""
         self.total_rows = random.randint(self.min_rows, self.max_rows)
@@ -401,62 +345,6 @@ class TableGenerationConfig:
         self.shadow_size_ratio = 0
 
 
-    def test_disable_all_effects(self):
-        self.disable_all_effects()
-        
-        # 모든 enable_ 설정이 False인지 확인
-        for attr_name in dir(self):
-            if attr_name.startswith('enable_'):
-                assert getattr(self, attr_name) == False, f"{attr_name} should be False"
-        
-        # 모든 확률 관련 설정이 0인지 확인
-        probability_attrs = [
-            'cell_no_border_probability', 'rounded_corner_probability', 'outer_border_probability',
-            'overflow_probability', 'gray_cell_probability', 
-            'random_line_probability', 'cell_imperfection_probability', 'blur_probability',
-            'empty_cell_ratio', 'merged_cell_probability',
-            'horizontal_merge_probability', 'vertical_merge_probability', 'table_side_line_probability',
-            'rounded_table_corner_probability', 'horizontal_divider_probability',
-            'vertical_divider_probability', 'no_border_cell_probability',
-            'no_border_gray_cell_probability', 'faded_color_probability', 'line_break_probability',
-            'line_thickness_variation_probability', 'corner_imperfection_probability',
-            'texture_effect_probability', 'line_blur_probability', 'irregular_thickness_probability',
-            'line_curve_probability', 'color_variation_probability', 'end_imperfection_probability',
-            'transparency_variation_probability', 'imperfect_ratio', 'class_info_probability',
-            'common_word_probability'
-        ]
-        for attr_name in probability_attrs:
-            assert getattr(self, attr_name) == 0.0, f"{attr_name} should be 0.0"
-        
-        # 기타 설정 확인
-        assert self.line_color == (0, 0, 0), "line_color should be (0, 0, 0)"
-        assert self.min_line_thickness == 1, "min_line_thickness should be 1"
-        assert self.max_line_thickness == 1, "max_line_thickness should be 1"
-        assert self.fonts == ['fonts/NanumGothic.ttf'], "fonts should be ['fonts/NanumGothic.ttf']"
-        assert self.min_font_size == 10, "min_font_size should be 10"
-        assert self.max_font_size == 10, "max_font_size should be 10"
-        assert self.header_row_height_factor == 1.0, "header_row_height_factor should be 1.0"
-        assert self.header_col_width_factor == 1.0, "header_col_width_factor should be 1.0"
-        
-        # 범위 설정 확인
-        assert self.min_corner_radius == 0, "min_corner_radius should be 0"
-        assert self.max_corner_radius == 0, "max_corner_radius should be 0"
-        assert self.min_table_corner_radius == 0, "min_table_corner_radius should be 0"
-        assert self.max_table_corner_radius == 0, "max_table_corner_radius should be 0"
-        assert self.noise_intensity_range == (0, 0), "noise_intensity_range should be (0, 0)"
-        assert self.blur_radius_range == (0, 0), "blur_radius_range should be (0, 0)"
-        assert self.brightness_factor_range == (1, 1), "brightness_factor_range should be (1, 1)"
-        assert self.contrast_factor_range == (1, 1), "contrast_factor_range should be (1, 1)"
-        assert self.shadow_opacity_range == (0, 0), "shadow_opacity_range should be (0, 0)"
-        assert self.shadow_blur_radius == 0, "shadow_blur_radius should be 0"
-        assert self.shadow_size_ratio == 0, "shadow_size_ratio should be 0"
-
-
-    def apply_simple_config(self):
-        self.disable_all_effects()
-        self.enable_simple_settings()
-        self.randomize_simple_settings()
-        
     def randomize_settings(self):
         if self.image_level == 0:
             self.disable_all_effects()
@@ -509,9 +397,9 @@ class TableGenerationConfig:
         self.min_table_width = random.randint(200, 400)
         self.min_table_height = random.randint(200, 400)
         self.min_cols = random.randint(3, 6)
-        self.max_cols = random.randint(self.min_cols, 15) # 최대 일주일치 + 3
+        self.max_cols = random.randint(self.min_cols, 12) # 최대 일주일치 + 3
         self.min_rows = random.randint(3, 6)
-        self.max_rows = random.randint(self.min_rows, 15) 
+        self.max_rows = random.randint(self.min_rows, 12) 
         self.set_table_dimensions()
 
         # 둥근 모서리 설정 랜덤화
@@ -603,15 +491,14 @@ class TableGenerationConfig:
         self.shape_line_width = random.randint(1, 10)
 
         if self.image_level > 2.5:
-
             # 셀 병합 설정 랜덤화
-            self.enable_cell_merging = random.choices([True, False], weights=[8, 2])[0]
+            self.enable_cell_merging = random.choices([True, False], weights=[7, 3])[0]
             self.enable_horizontal_merge = random.choices([True, False], weights=[5,5])[0]
             self.enable_vertical_merge = random.choices([True, False], weights=[6, 4])[0]
             self.merged_cell_ratio = random.uniform(0.3, 0.7)
             self.merged_cell_probability = random.uniform(0.3, 0.6)
-            self.max_horizontal_merge = random.randint(2, 7)
-            self.max_vertical_merge = random.randint(2, 7)
+            self.max_horizontal_merge = random.randint(3, 7)
+            self.max_vertical_merge = random.randint(3, 7)
             self.horizontal_merge_probability = random.uniform(0.3, 0.6)
             self.vertical_merge_probability = random.uniform(0.3, 0.6)
         elif self.image_level > 2:

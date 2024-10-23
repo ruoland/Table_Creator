@@ -143,12 +143,11 @@ class TableGenerationConfig:
         # 오버플로우 설정
         self.enable_overflow = True  # 오버플로우 사용 여부
         self.overflow_probability = 0.7  # 오버플로우 발생 확률
-        self.min_overflow_height = 10  # 최소 오버플로우 높이
-        self.max_overflow_check_rows = 5  # 오버플로우 영향을 확인할 최대 행 수
+        self.min_overflow_height = 3  # 최소 오버플로우 높이
+        self.max_overflow_height = 10  # 오버플로우 영향을 확인할 최대 행 수
         self.overflow_only_row_probability = 0.1
         self.default_row_height = 30
         self.default_col_width = 100
-        self.min_overflow_height = 10
         self.row_overflow_probability = 0.4
         # 도형 설정
         self.enable_shapes = True  # 도형 사용 여부
@@ -582,12 +581,15 @@ class TableGenerationConfig:
         self.max_text_length = random.randint(60, 200)
         self.class_info_probability = random.uniform(0.4, 0.7)
         self.common_word_probability = random.uniform(0.4, 0.7)
-        
         if self.image_level > 2.5:
             # 오버플로우 설정 랜덤화
-            self.enable_overflow = random.choices([True, False], weights=[7, 3])[0]
-            self.overflow_probability = random.uniform(0.3, 0.8)
-            self.min_overflow_height = random.randint(10, 40)
+            self.enable_overflow = random.choices([True, False], weights=[6, 4])[0]
+            self.overflow_probability = random.uniform(0.3, 0.7)
+            self.min_overflow_height = random.randint(1, min(10, self.max_cell_height - 10))
+            if self.max_cell_height > self.min_overflow_height:
+                self.max_overflow_height = random.randint(self.min_overflow_height + 1, self.max_cell_height - 1)
+            else:
+                self.max_overflow_height = self.max_cell_height - 15
         elif self.image_level > 2:
             self.enable_overflow = random.choices([True, False], weights=[3, 7])[0]
             self.overflow_probability = random.uniform(0.3, 0.4)
@@ -642,7 +644,7 @@ class TableGenerationConfig:
             self.line_blur_probability = random.uniform(0.3, 0.6)
             self.cell_shift_down_probability = random.uniform(0.1, 0.3)
             self.no_border_gray_cell_probability = random.uniform(0.1, 0.2)
-
+            self.cell_no_border_probability = random.uniform(0.1, 0.2) # 선 제거, 선 삭제, 선 안 그리기
         else:
             self.cell_imperfection_probability = 0
             self.table_crop_probability = 0

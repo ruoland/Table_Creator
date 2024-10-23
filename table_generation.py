@@ -3,182 +3,253 @@ import numpy as np
 from dataset_config import TableGenerationConfig, CELL_CATEGORY_ID, TABLE_CATEGORY_ID, COLUMN_CATEGORY_ID, ROW_CATEGORY_ID, MERGED_CELL_CATEGORY_ID, OVERFLOW_CELL_CATEGORY_ID, HEADER_ROW_CATEGORY_ID, HEADER_COLUMN_CATEGORY_ID
 from logging_config import table_logger, get_memory_handler
 from table_cell_creator import *
-
-def create_table(image_width, image_height, margins, title_height, config: TableGenerationConfig):
-    memory_handler = get_memory_handler()
-    table_logger.addHandler(memory_handler)
+from dataset_utils import adjust_cell_positions
+class Table:
     
-    try:
-        table_logger.debug(f"create_table 시작: 이미지 크기 {image_width}x{image_height}")
-        margin_left, margin_top, margin_right, margin_bottom = map(int, margins)
-        title_height = int(title_height)
+    def __init__(self, config: TableGenerationConfig):
+        self.config = config
+        self.rows = 0
+        self.cols = 0
+        self.table_width=0
+        self.table_height =0
+        self.cells = []
+        self.merged_cells = []
+        self.overflow_cells = []
+        self.col_widths = []
+        self.row_heights = []
+        self.table_bbox = []
+        self.is_rounded = False
+        self.corner_radius = 0
+        self.gap = 0
         
-        # 갭 설정
-        gap = random.randint(config.min_cell_gap, config.max_cell_gap) if config.enable_cell_gap else 0
+        # 여백 정보 추가
+        self.margin_left = 0
+        self.margin_top = 0
+        self.margin_right = 0
+        self.margin_bottom = 0
+        self.title_height = 0
         
-        max_rows = config.max_rows
-        max_cols = config.max_cols
+        self.image_width = 0
+        self.image_height = 0
+        self.config_min_table_height = 0
+        self.config_max_table_height = 0
         
-
+    def set_margins(self, margins, title_height):
+        self.margin_left, self.margin_top, self.margin_right, self.margin_bottom = map(int, margins)
+        self.title_height = int(title_height)
+        
+    def set_gap(self):
+        self.gap = random.randint(self.config.min_cell_gap, self.config.max_cell_gap) if self.config.enable_cell_gap else 0
         # 테이블 크기 계산 (갭 포함)
-        table_width = min(max(config.min_table_width, image_width - margin_left - margin_right), image_width)
-        table_height = min(max(config.min_table_height, image_height - margin_top - margin_bottom - title_height), image_height)
-
+        self.table_width = min(max(self.config.min_table_width, self.image_width - self.margin_left - self.margin_right), self.image_width)
+        self.table_height = min(max(self.config.min_table_height, self.image_height - self.margin_top - self.margin_bottom - self.title_height), self.image_height)
+    
+    def set_matrix(self):
+        max_rows = self.config.max_rows
+        max_cols = self.config.max_cols
+        
         # 행과 열 수 계산 (갭 고려), 최소 2개의 셀 보장
-        cols = max(2, min(max_cols, (table_width + gap) // (config.min_cell_width + gap)))
-        rows = max(2, min(max_rows, (table_height + gap) // (config.min_cell_height + gap)))
+        self.cols = max(2, min(max_cols, (self.table_width + self.gap) // (self.config.min_cell_width + self.gap)))
+        self.rows = max(2, min(max_rows, (self.table_height + self.gap) // (self.config.min_cell_height + self.gap)))
+                # 행과 열 수 계산 (갭 고려), 최소 2개의 셀 보장
         
         # 만약 행이나 열이 1인 경우, 다른 쪽을 2로 설정
-        if rows == 1:
-            cols = max(2, cols)
-        elif cols == 1:
-            rows = max(2, rows)
-        
-        # TableGenerationConfig에 total_rows와 total_cols 설정
-        config.total_rows = rows
-        config.total_cols = cols
-
-        table_logger.info(f"테이블 크기: {table_width}x{table_height}, 행 수: {rows}, 열 수: {cols}, 갭: {gap}")
-
-        # 셀 크기 계산 (갭 제외)
-        available_width = table_width - (cols - 1) * gap
-        available_height = table_height - (rows - 1) * gap
-        min_cell_width = max(config.min_cell_width, available_width // cols)
-        min_cell_height = max(config.min_cell_height, available_height // rows)
+        if self.rows == 1:
+            self.cols = max(2, self.cols)
+        elif self.cols == 1:
+            self.rows = max(2, self.rows)
+            
+        self.config.total_rows = self.rows
+        self.config.total_cols = self.cols
+    
+    def set_cell_size_and_header(self):
+        available_width = self.table_width - (self.cols - 1) * self.gap
+        available_height = self.table_height - (self.rows - 1) * self.gap
+        min_cell_width = max(self.config.min_cell_width, available_width // self.cols)
+        min_cell_height = max(self.config.min_cell_height, available_height // self.rows)
 
         # 헤더 행과 열의 크기 계산
-        header_row_height = int(min_cell_height * config.header_row_height_factor)
-        header_col_width = int(min_cell_width * config.header_col_width_factor)
+        header_row_height = int(min_cell_height * self.config.header_row_height_factor)
+        header_col_width = int(min_cell_width * self.config.header_col_width_factor)
 
-        col_widths = [min_cell_width] * cols
-        row_heights = [min_cell_height] * rows
-
+        self.col_widths = [min_cell_width] * self.cols
+        self.row_heights = [min_cell_height] * self.rows
+        
         # 헤더 행과 열에 대해 다른 크기 적용
-        if config.table_type in ['header_row', 'header_both']:
-            row_heights[0] = header_row_height
-        if config.table_type in ['header_column', 'header_both']:
-            col_widths[0] = header_col_width
-
-        # 0,0 셀(왼쪽 위 셀)의 너비만 랜덤하게 조정
-        if config.table_type in ['header_column', 'header_both']:
+        if self.config.table_type in ['header_row', 'header_both']:
+            self.row_heights[0] = header_row_height
+        if self.config.table_type in ['header_column', 'header_both']:
+            self.col_widths[0] = header_col_width
+        self.set_first_header()
+    def set_first_header(self):
+                # 0,0 셀(왼쪽 위 셀)의 너비만 랜덤하게 조정
+        if self.config.table_type in ['header_column', 'header_both']:
             corner_cell_width_factor = random.uniform(0.5, 2.0)  # 50% ~ 200% 사이의 랜덤 값
-            original_first_col_width = col_widths[0]
-            col_widths[0] = int(col_widths[0] * corner_cell_width_factor)
+            original_first_col_width = self.col_widths[0]
+            self.col_widths[0] = int(self.col_widths[0] * corner_cell_width_factor)
 
             # 너비가 최소값 이하로 내려가지 않도록 보정
-            col_widths[0] = max(col_widths[0], config.min_cell_width)
+            self.col_widths[0] = max(self.col_widths[0], self.config.min_cell_width)
 
             # 너비가 테이블 전체 너비의 50%를 넘지 않도록 제한
-            max_width = int(table_width * 0.5)
-            col_widths[0] = min(col_widths[0], max_width)
+            max_width = int(self.table_width * 0.5)
+            self.col_widths[0] = min(self.col_widths[0], max_width)
 
-            # 첫 번째 열의 너비 변화량 계산
-            width_change = col_widths[0] - original_first_col_width
-
-        # 남은 공간 계산 (첫 번째 열 제외)
-        remaining_width = table_width - col_widths[0]
-        remaining_cols = cols - 1
+    def process_remain_space(self):
+                # 남은 공간 계산 (첫 번째 열 제외)
+        remaining_width = self.table_width - self.col_widths[0]
+        remaining_cols = self.cols - 1
 
         # 남은 열들의 너비 재조정
         if remaining_cols > 0:
             col_width = remaining_width // remaining_cols
             extra_width = remaining_width % remaining_cols
             
-            for i in range(1, cols):
-                col_widths[i] = col_width
+            for i in range(1, self.cols):
+                self.col_widths[i] = col_width
                 if extra_width > 0:
-                    col_widths[i] += 1
+                    self.col_widths[i] += 1
                     extra_width -= 1
+        # 남은 공간 계산 (첫 번째 행 제외)
+        remaining_height = self.table_height - self.row_heights[0]
+        remaining_rows = self.rows - 1
 
-        cells = []
-        y = margin_top + title_height
+        # 남은 행들의 높이 재조정
+        if remaining_rows > 0:
+            row_height = remaining_height // remaining_rows
+            extra_height = remaining_height % remaining_rows
+            
+            for i in range(1, self.rows):
+                self.row_heights[i] = row_height
+                if extra_height > 0:
+                    self.row_heights[i] += 1
+                    extra_height -= 1
+    
+    def make_cells(self):
+        self.cells = []
+        y = self.margin_top + self.title_height
 
-        for row in range(rows):
-            x = margin_left
-            for col in range(cols):
-                is_header = (config.table_type in ['header_row', 'header_both'] and row == 0) or \
-                            (config.table_type in ['header_column', 'header_both'] and col == 0)
-                is_gray = random.random() < config.gray_cell_probability
+        for row in range(self.rows):
+            x = self.margin_left
+            for col in range(self.cols):
+                is_header = (self.config.table_type in ['header_row', 'header_both'] and row == 0) or \
+                            (self.config.table_type in ['header_column', 'header_both'] and col == 0)
+                is_gray = random.random() < self.config.gray_cell_probability
 
                 cell = {
                     'x1': x,
                     'y1': y,
-                    'x2': x + col_widths[col],
-                    'y2': y + row_heights[row],
+                    'x2': x + self.col_widths[col],
+                    'y2': y + self.row_heights[row],
                     'row': row,
                     'col': col,
                     'is_merged': False,
                     'is_header': is_header,
                     'is_gray': is_gray,
-                    'original_height': row_heights[row],
+                    'original_height': self.row_heights[row],
                     'overflow': None,
                     'cell_type': 'normal_cell'
                 }
-                cells.append(cell)
-                x += col_widths[col] + gap
-            y += row_heights[row] + gap
+                self.cells.append(cell)
+                x += self.col_widths[col] + self.gap
+            y += self.row_heights[row] + self.gap
 
-        log_cell_coordinates(cells, "Initial cell creation")
+        log_cell_coordinates(self.cells, "Initial cell creation")
         # 테이블의 전체 경계 상자 계산
         table_bbox = [
-            margin_left,
-            margin_top + title_height,
-            margin_left + table_width,
-            margin_top + title_height + table_height
+            self.margin_left,
+            self.margin_top + self.title_height,
+            self.margin_left + self.table_width,
+            self.margin_top + self.title_height + self.table_height
         ]
-        if table_width > (table_bbox[2] - table_bbox[0]) or table_height > (table_bbox[3] - table_bbox[1]):
-            table_logger.warning(f"Table size exceeds bounding box. Bbox: {table_bbox}, Table: {table_width}x{table_height}")
-        table_logger.info(f"초기 셀 생성 완료. 총 셀 수: {len(cells)}")
-        cells = validate_all_cells(cells, table_bbox, "cell creation")
-        log_cell_coordinates(cells, "After initial validation")
-
-        is_table_rounded = config.enable_rounded_table_corners and random.random() < config.rounded_table_corner_probability
-        table_corner_radius = random.randint(config.min_table_corner_radius, config.max_table_corner_radius) if is_table_rounded else 0
-
-        # 셀 병합 (옵션)
-        if config.enable_cell_merging and len(cells) > 2:
-            cells = merge_cells(cells, rows, cols, config, table_bbox)
-            table_logger.info(f"셀 병합 후 셀 수: {len(cells)}")
-            log_cell_coordinates(cells, "After cell merging")
-        cells = validate_all_cells(cells, table_bbox, "cell merging")
-
-        # 오버플로우 계획
-        cells = plan_cell_overflow(cells, config)
-        table_logger.info(f"오버플로우 계획 후 셀 수: {len(cells)}")
-        log_cell_coordinates(cells, "After overflow planning")
-
-        # 셀 위치 조정
-        cells = adjust_cell_positions(cells, config, table_bbox)
-        table_logger.info(f"셀 위치 조정 후 셀 수: {len(cells)}")
-        log_cell_coordinates(cells, "After cell position adjustment")
-            
+        if self.table_width > (table_bbox[2] - table_bbox[0]) or self.table_height > (table_bbox[3] - table_bbox[1]):
+            table_logger.warning(f"Table size exceeds bounding box. Bbox: {table_bbox}, Table: {self.table_width}x{self.table_height}")
+        self.cells = validate_all_cells(self.cells, table_bbox, "cell creation")
+        self.table_bbox = table_bbox
+        return self.cells
+    
+    def make_merged_cells(self, cells):
+        if self.config.enable_cell_merging and len(cells) > 2:
+            self.cells = merge_cells(cells, self.rows, self.cols, self.config, self.table_bbox)
+        self.cells = validate_all_cells(cells, self.table_bbox, "cell merging")
+        
+    def make_overflow_cells(self):
+        self.cells = plan_cell_overflow(self.cells, self.config)
+        self.cells = validate_all_cells(self.cells, self.table_bbox, "cell merging")
+        
+    def validate_table(self):
         # 최종 검증: 셀이 2개 미만인 경우 처리
-        if len(cells) < 2:
+        if len(self.cells) < 2:
             table_logger.warning("셀 수가 2개 미만입니다. 테이블을 2x1로 재구성합니다.")
-            cells = [
-                {'x1': margin_left, 'y1': margin_top + title_height, 'x2': margin_left + table_width // 2,
-                    'y2': margin_top + title_height + table_height,
+            self.cells = [
+                {'x1': self.margin_left, 'y1': self.margin_top + self.title_height, 'x2': self.margin_left + self.table_width // 2,
+                    'y2': self.margin_top + self.title_height + self.table_height,
                     'row': 0, 'col': 0, 'is_merged': False, 'is_header': False,
-                    'original_height': table_height, 'overflow': None, 'cell_type': 'normal_cell'},
-                {'x1': margin_left + table_width // 2, 'y1': margin_top + title_height,
-                    'x2': margin_left + table_width,
-                    'y2': margin_top + title_height + table_height,
+                    'original_height': self.table_height, 'overflow': None, 'cell_type': 'normal_cell'},
+                {'x1': self.margin_left + self.table_width // 2, 'y1': self.margin_top + self.title_height,
+                    'x2': self.margin_left + self.table_width,
+                    'y2': self.margin_top + self.title_height + self.table_height,
                     'row': 0, 'col': 1, 'is_merged': False, 'is_header': False,
-                    'original_height': table_height, 'overflow': None, 'cell_type': 'normal_cell'}
+                    'original_height': self.table_height, 'overflow': None, 'cell_type': 'normal_cell'}
             ]
-        cells = validate_cell_coordinates(cells, table_bbox)
-        log_cell_coordinates(cells, "Final validation")
-        table_logger.debug(f"create_table 종료: 생성된 셀 수 {len(cells)}")
-        return cells, table_bbox, is_table_rounded, table_corner_radius    
-    except Exception as e:
-        table_logger.error(f"테이블 생성 중 오류 발생: {str(e)}", exc_info=True)
-        raise
-    finally:
-        # 메모리 핸들러의 내용을 모두 출력하고 로거에서 제거
-        memory_handler.close()
-        table_logger.removeHandler(memory_handler)
+        self.cells = validate_cell_coordinates(self.cells, self.table_bbox)
+        
+    def create_table(self, image_width :int, image_height :int, margins, title_height, config):
+        self.config = config
+        table_logger.debug(f"create_table 시작: 이미지 크기 {image_width}x{image_height}")
+        self.set_margins(margins, title_height)
+        title_height = int(title_height)
+        
+        self.set_gap()
+        self.set_matrix()
+        self.set_cell_size_and_header()
+        self.process_remain_space()
+        
+        cells = self.make_cells()
+        
+        # 셀 병합 (옵션)
+        
+        try:
+            cells = adjust_cell_positions(cells, config, self.table_bbox)
+
+            cells = merge_cells(cells, self.rows, self.cols, config, self.table_bbox)
+    
+            cells = validate_all_cells(cells, self.table_bbox, "cell merging")
+            cells = plan_cell_overflow(cells, config)
+            cells = adjust_cell_positions(cells, config, self.table_bbox)
+                
+            cells = self.validate_table()
+            is_table_rounded = config.enable_rounded_table_corners and random.random() < config.rounded_table_corner_probability
+            table_corner_radius = random.randint(config.min_table_corner_radius, config.max_table_corner_radius) if is_table_rounded else 0
+            return self, cells, self.table_bbox, is_table_rounded, table_corner_radius    
+        except Exception as e:
+            table_logger.error(f"테이블 생성 중 오류 발생: {str(e)}", exc_info=True)
+            print(cells)
+
+            raise
+
+        return self
+    
+    
 
 
+def validate_cell_coordinates(cells, table_bbox):
+    for cell in cells:
+        # x 좌표 조정
+        cell['x1'] = max(table_bbox[0], min(cell['x1'], table_bbox[2] - 1))
+        cell['x2'] = min(table_bbox[2], max(cell['x2'], cell['x1'] + 1))
+        
+        # y 좌표 조정
+        cell['y1'] = max(table_bbox[1], min(cell['y1'], table_bbox[3] - 1))
+        cell['y2'] = min(table_bbox[3], max(cell['y2'], cell['y1'] + 1))
+        
+        # 최소 크기 보장
+        if cell['x2'] - cell['x1'] < 1:
+            cell['x2'] = cell['x1'] + 1
+        if cell['y2'] - cell['y1'] < 1:
+            cell['y2'] = cell['y1'] + 1
+        
+    return cells
 def validate_all_cells(cells, table_bbox, stage_name):
     for cell in cells:
         if cell['x1'] >= cell['x2'] or cell['y1'] >= cell['y2']:

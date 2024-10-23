@@ -54,12 +54,12 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
         cell_bg_color = bg_color
 
     # 셀 그리기
-    can_draw_border = not (is_gray and random.random() < config.no_border_gray_cell_probability)
+    can_draw_border = (is_gray and (random.random() < config.no_border_gray_cell_probability)) or (not is_gray and random.random() < config.cell_no_border_probability)
 
     # 셀 배경 그리기
     draw.rectangle([x1, y1, x2, y2], fill=cell_bg_color)
 
-    if can_draw_border:
+    if can_draw_border or is_overflow:
         line_thickness = config.get_random_line_thickness()
         is_rounded = config.enable_rounded_corners and random.random() < config.rounded_corner_probability
         is_no_side_border = random.random() < config.no_side_borders_cells_probability
@@ -98,8 +98,6 @@ def draw_cell(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int]
             draw.line([(x2, y1 + offset), (x2, y2)], fill=line_color, width=line_thickness)
     table_logger.debug(f"Finished drawing cell: {cell}")
     return cell_bg_color
-
-
 
 def draw_imperfect_cell_border(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, 
                                line_color: Tuple[int, int, int], line_thickness: int, 
@@ -261,8 +259,6 @@ def apply_color_variation(line_color: Tuple[int, int, int], bg_color: Tuple[int,
         return apply_color_variation(line_color, bg_color, config, count+1)
     else: #3번 시도했지만 실패한 경우 원본으로 반환합니다.
         return line_color
-
-
 def redraw_cell_with_overflow(draw: ImageDraw.Draw, cell: dict, line_color: Tuple[int, int, int], 
                               table_bbox: List[int], bg_color: Tuple[int, int, int], config: TableGenerationConfig) -> None:
     x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
@@ -274,25 +270,38 @@ def redraw_cell_with_overflow(draw: ImageDraw.Draw, cell: dict, line_color: Tupl
     cell_bg_color = cell.get('bg_color', bg_color)
     line_thickness = config.get_random_line_thickness()
 
-    # 오버플로우 방향에 따라 원래 셀의 선 지우기
-    if direction in ['up', 'both']:
-        draw.line([(x1, y1), (x2, y1)], fill=cell_bg_color, width=line_thickness)
-    if direction in ['down', 'both']:
-        draw.line([(x1, y2), (x2, y2)], fill=cell_bg_color, width=line_thickness)
-
-    # 오버플로우 영역 배경 그리기
-    if direction in ['up', 'both']:
-        draw.rectangle([x1, overflow_y1, x2, y1], fill=cell_bg_color)
-    if direction in ['down', 'both']:
-        draw.rectangle([x1, y2, x2, overflow_y2], fill=cell_bg_color)
+    # 오버플로우 영역 전체를 셀 배경색으로 완전히 덮어씌우기
+    draw.rectangle([x1, overflow_y1, x2, overflow_y2], fill=cell_bg_color)
 
     # 오버플로우 영역 테두리 그리기
-    if direction in ['up', 'both']:
-        draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=line_thickness)
-    if direction in ['down', 'both']:
-        draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=line_thickness)
+    draw.line([(x1, overflow_y1), (x2, overflow_y1)], fill=line_color, width=line_thickness)
+    draw.line([(x1, overflow_y2), (x2, overflow_y2)], fill=line_color, width=line_thickness)
     draw.line([(x1, overflow_y1), (x1, overflow_y2)], fill=line_color, width=line_thickness)
     draw.line([(x2, overflow_y1), (x2, overflow_y2)], fill=line_color, width=line_thickness)
+
+    # 원래 셀 영역의 테두리 다시 그리기 (오버플로우 방향에 따라)
+    if direction in ['down', 'both']:
+        draw.line([(x1, y1), (x2, y1)], fill=line_color, width=line_thickness)
+    if direction in ['up', 'both']:
+        draw.line([(x1, y2), (x2, y2)], fill=line_color, width=line_thickness)
+    draw.line([(x1, y1), (x1, y2)], fill=line_color, width=line_thickness)
+    draw.line([(x2, y1), (x2, y2)], fill=line_color, width=line_thickness)
+
+    # 병합된 셀의 경우 내부 선 처리
+    if cell.get('is_merged', False):
+        merge_rows = cell.get('merge_rows', 1)
+        merge_cols = cell.get('merge_cols', 1)
+        cell_width = (x2 - x1) // merge_cols
+        cell_height = (y2 - y1) // merge_rows
+
+        for row in range(1, merge_rows):
+            y = y1 + row * cell_height
+            if y > overflow_y1 and y < overflow_y2:
+                draw.line([(x1, y), (x2, y)], fill=cell_bg_color, width=line_thickness)
+
+        for col in range(1, merge_cols):
+            x = x1 + col * cell_width
+            draw.line([(x, overflow_y1), (x, overflow_y2)], fill=cell_bg_color, width=line_thickness)
 
 
 def draw_outer_border(draw: ImageDraw.Draw, table_bbox: List[int], line_color: Tuple[int, int, int]) -> None:

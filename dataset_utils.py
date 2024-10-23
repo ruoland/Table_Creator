@@ -135,3 +135,98 @@ def validate_color(color: Union[int, Tuple[int, int, int]]) -> Tuple[int, int, i
     else:
         table_logger.warning(f"Invalid color format: {color}. Using default black.")
         return (0, 0, 0)
+    
+
+def adjust_cell_positions(cells, config, table_bbox):
+    if not config.enable_overflow:
+        return cells
+    
+    table_logger.warning(f"셀 위치 조정 시작: 총 {len(cells)}개 셀")
+    adjusted_count = 0
+    
+    for cell in cells:
+        original_x1, original_x2 = cell['x1'], cell['x2']
+        original_y1, original_y2 = cell['y1'], cell['y2']
+        
+        # 기본 x1 및 x2 좌표 검증 추가 
+        cell['x1'] = max(cell['x1'], table_bbox[0])
+        cell['x2'] = min(cell['x2'], table_bbox[2])
+
+        # x1이 x2보다 크거나 같은 경우 조정 
+        if cell['x1'] >= cell['x2']:
+            middle_x = (cell['x1'] + cell['x2']) / 2 
+            cell['x1'] = max(middle_x - 1, table_bbox[0]) 
+            cell['x2'] = min(middle_x + 1, table_bbox[2]) 
+        
+        if cell['x1'] != original_x1 or cell['x2'] != original_x2:
+            table_logger.warning(f"X 좌표 조정: row={cell['row']}, col={cell['col']}, x1: {original_x1} -> {cell['x1']}, x2: {original_x2} -> {cell['x2']}")
+
+        if cell.get('overflow') and cell.get('overflow_applied', False):
+            direction = cell['overflow']['direction']
+            height_up = cell['overflow']['height_up']
+            height_down = cell['overflow']['height_down']
+            
+            # 병합된 셀 여부 확인
+            is_merged = cell.get('is_merged', False)
+            merge_rows = cell.get('merge_rows', 1)
+            merge_cols = cell.get('merge_cols', 1)
+            
+            if direction in ['up', 'both']:
+                cell['overflow_y1'] = max(cell['y1'] - height_up, table_bbox[1])
+            if direction in ['down', 'both']:
+                cell['overflow_y2'] = min(cell['y2'] + height_down, table_bbox[3])
+            
+            # 실제로 오버플로우가 적용되었는지 다시 확인
+            if cell['overflow_y1'] == original_y1 and cell['overflow_y2'] == original_y2:
+                table_logger.warning(f"오버플로우 취소: row={cell['row']}, col={cell['col']}, 변화 없음")
+                cell.pop('overflow', None)
+                cell.pop('overflow_y1', None)
+                cell.pop('overflow_y2', None)
+                cell.pop('overflow_applied', None)
+                if cell['is_merged']:
+                    cell['cell_type'] = 'merged_cell'
+                else:
+                    cell['cell_type'] = 'cell'
+            else:
+                table_logger.warning(f"오버플로우 적용: row={cell['row']}, col={cell['col']}, direction={direction}, y1: {original_y1} -> {cell['overflow_y1']}, y2: {original_y2} -> {cell['overflow_y2']}")
+                adjusted_count += 1 
+
+    for cell in cells:
+        if 'overflow_y1' in cell:
+            original_y1 = cell['overflow_y1']
+            cell['overflow_y1'] = max(min(cell['overflow_y1'], cell['y2']-1), table_bbox[1])
+            if cell['overflow_y1'] != original_y1:
+                table_logger.warning(f"오버플로우 y1 조정: row={cell['row']}, col={cell['col']}, y1: {original_y1} -> {cell['overflow_y1']}")
+        
+        if 'overflow_y2' in cell:
+            original_y2 = cell['overflow_y2']
+            cell['overflow_y2'] = min(max(cell['overflow_y2'], cell['y1']+1), table_bbox[3])
+            if cell['overflow_y2'] != original_y2:
+                table_logger.warning(f"오버플로우 y2 조정: row={cell['row']}, col={cell['col']}, y2: {original_y2} -> {cell['overflow_y2']}")
+        
+        # 기본 y 좌표 검증 
+        original_y1, original_y2 = cell['y1'], cell['y2']
+        cell['y1'] = max(cell['y1'], table_bbox[1])
+        cell['y2'] = min(cell['y2'], table_bbox[3])
+        
+        # y 좌표 조정 
+        if cell['y1'] >= cell['y2']:
+            middle_y = (cell['y1'] + cell['y2']) / 2 
+            cell['y1'] = max(middle_y - 1, table_bbox[1]) 
+            cell['y2'] = min(middle_y + 1, table_bbox[3]) 
+        
+        if cell['y1'] != original_y1 or cell['y2'] != original_y2:
+            table_logger.warning(f"Y 좌표 조정: row={cell['row']}, col={cell['col']}, y1: {original_y1} -> {cell['y1']}, y2: {original_y2} -> {cell['y2']}")
+
+        # 최종 검증 
+        cell['x1'] = max(min(cell['x1'], table_bbox[2]), table_bbox[0]) 
+        cell['x2'] = max(min(cell['x2'], table_bbox[2]), table_bbox[0]) 
+        cell['y1'] = max(min(cell['y1'], table_bbox[3]), table_bbox[1]) 
+        cell['y2'] = max(min(cell['y2'], table_bbox[3]), table_bbox[1]) 
+
+        # 최소 크기 확인 
+        if (cell['x2'] - cell['x1']) < 10 or (cell['y2'] - cell['y1']) < 10:
+            table_logger.warning(f"Invalid size after adjustment: {cell}")
+
+    table_logger.warning(f"셀 위치 조정 완료: {adjusted_count}개 셀의 위치가 조정됨")
+    return cells

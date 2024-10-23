@@ -1,11 +1,11 @@
 from PIL import ImageDraw, Image
 import random
 from typing import Tuple, List, Optional
+from table_generation import Table
 from dataset_utils import *
 from dataset_constant import *
 from dataset_config import TableGenerationConfig
 from dataset_draw_content import add_content_to_cells, add_shapes, add_title_to_image, apply_imperfections
-from table_generation import create_table
 from dataset_draw_cell import draw_cell, draw_outer_border, redraw_cell_with_overflow, draw_divider_lines, draw_rounded_rectangle
 from dataset_draw_preprocess import apply_realistic_effects
 from table_generation import generate_coco_annotations
@@ -39,12 +39,12 @@ def generate_image_and_labels(image_id, resolution, margins, bg_mode, has_gap, i
         else:
             title_height = 0
         
-        cells, table_bbox, is_table_rounded, table_corner_radius = create_table(image_width, image_height, margins, title_height, config=config)    
+        table, cells, table_bbox, is_table_rounded, table_corner_radius = Table(config).create_table(image_width, image_height, margins, title_height, config=config)    
 
         if config.enable_shapes: #도형
             max_height = max(title_height, table_bbox[1])
             add_shapes(img, 0, title_height, image_width, max_height, bg_color)
-        validate_cell_structure(cells, "테이블 생성 후")
+        validate_cell_structure(table.cells, "테이블 생성 후")
         
         draw = ImageDraw.Draw(img)
         draw_table(draw, cells, table_bbox, bg_color, has_gap, is_imperfect, config, is_table_rounded, table_corner_radius)

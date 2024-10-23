@@ -51,7 +51,7 @@ def apply_realistic_effects(image: Image.Image, cells: List[List[float]], table_
     new_width, new_height = image.size
 
     # 표 잘라내기 기능 추가
-    if random.random() < config.table_crop_probability:  # 10% 확률로 표 잘라내기 적용
+    if random.random() < config.table_crop_probability and random.random() < config.table_crop_probability:  # 10% 확률로 표 잘라내기 적용
         image, cells, table_bbox = crop_table(image, cells, table_bbox, config)
 
     # 기존 효과 적용

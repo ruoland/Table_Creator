@@ -33,6 +33,7 @@ def generate_random_resolution() -> Tuple[Tuple[int, int], Tuple[int, int, int, 
     width = width - (width % 32) + margin_left + margin_right
     height = height - (height % 32) + margin_top + margin_bottom
     return (width, height), (margin_left, margin_top, margin_right, margin_bottom)
+
 def generate_image_and_labels(image_id, bg_mode, has_gap, is_imperfect=False, config:TableGenerationConfig=None):
     log_trace()
     table_logger.debug(f"generate_image_and_labels 시작: 이미지 ID {image_id}")
@@ -62,7 +63,7 @@ def generate_image_and_labels(image_id, bg_mode, has_gap, is_imperfect=False, co
         draw_table(draw, cells, table.table_bbox, bg_color, has_gap, is_imperfect, config, is_table_rounded, table_corner_radius)
 
         if config.enable_text_generation or config.enable_shapes:
-            add_content_to_cells(img, cells, random.choice(config.fonts))
+            add_content_to_cells(img, cells, random.choice(config.fonts),config.empty_cell_ratio)
 
         if is_imperfect:
             img = apply_imperfections(img, cells)
@@ -148,8 +149,12 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
                 continue
 
             is_gray = cell.get('is_gray', False)
-            cell_bg_color = config.get_random_gray_color(bg_color) or bg_color if config.enable_gray_cells and is_gray else bg_color
-
+            if config.enable_gray_cells and is_gray:
+                cell_bg_color = config.get_random_gray_color(bg_color)
+                cell['is_gray'] =  True
+            else:
+                cell_bg_color = bg_color
+            
             try:
                 draw_cell(draw, cell, line_color, is_imperfect, table_bbox, cell_bg_color, config)
             except Exception as e:
@@ -162,18 +167,19 @@ def draw_table(draw: ImageDraw.Draw, cells: List[dict], table_bbox: List[int],
     # 오버플로우된 셀 그리기
     for cell in cells:
         if cell.get('overflow'):
+            
             try:
-                redraw_cell_with_overflow(draw, cell, line_color, table_bbox, bg_color, config)
+                redraw_cell_with_overflow(draw, cell, line_color, bg_color, config)
             except Exception as e:
                 table_logger.error(f"Error redrawing cell with overflow {cell}: {str(e)}")
-    
+                
     if config.enable_outer_border:
         draw_outer_border(draw, table_bbox, line_color)
 
     # 구분선 그리기
     if config.enable_divider_lines:
         draw_divider_lines(draw, cells, line_color, config)
-def apply_cell_shift_effect(draw: ImageDraw.Draw, cells: List[dict], bg_color: Tuple[int, int, int], 
+def apply_cell_shift_effect(draw: ImageDraw.Draw, cells: List[dict], cell_bg_color: Tuple[int, int, int], 
                             line_color: Tuple[int, int, int], config: TableGenerationConfig):
     # 셀을 행과 열 기준으로 정렬
     sorted_cells = sorted(cells, key=lambda c: (c['row'], c['col']))
@@ -184,9 +190,8 @@ def apply_cell_shift_effect(draw: ImageDraw.Draw, cells: List[dict], bg_color: T
             random.random() < config.cell_shift_down_probability):
             
             x1, y1, x2, y2 = cell['x1'], cell['y1'], cell['x2'], cell['y2']
-            offset = random.randint(1, 3)
-            is_gray = cell.get('is_gray', False)
-            cell_bg_color = config.get_random_gray_color(bg_color) or bg_color if config.enable_gray_cells and is_gray else bg_color
+            offset = random.randint(1, 5)
+
             
             # 위쪽 셀 확인
             above_cell = next((c for c in sorted_cells[:i] if c['row'] == cell['row'] - 1 and c['col'] == cell['col']), None)
@@ -199,7 +204,7 @@ def apply_cell_shift_effect(draw: ImageDraw.Draw, cells: List[dict], bg_color: T
                 y1 = above_cell['shifted_y2']
             
             # 위쪽 선을 배경색으로 덮기 (위쪽 셀의 아래 테두리 유지)
-            draw.line([(x1, y1+1), (x2, y1+1)], fill=bg_color, width=offset-1)
+            draw.line([(x1, y1+1), (x2, y1+1)], fill=cell_bg_color, width=offset-1)
             
             # 셀 배경 그리기 (약간 아래로 이동)
             draw.rectangle([x1, y1 + offset, x2, y2], fill=cell_bg_color)

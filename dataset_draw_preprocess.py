@@ -4,7 +4,9 @@ from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
 import random
 import numpy as np
 from typing import List, Tuple, Optional, Dict
-
+import random
+from typing import List, Tuple
+from PIL import Image, ImageEnhance, ImageFilter
 # 상수 정의
 MIN_CELL_SIZE = 5  # 픽셀 단위
 
@@ -19,56 +21,56 @@ def add_noise(image: Image.Image, intensity: float = 0.1) -> Image.Image:
     noise = np.random.normal(0, 15 * intensity, np_image.shape).astype(np.int8)
     np_image = np.clip(np_image + noise, 0, 255).astype(np.uint8)
     return Image.fromarray(np_image)
-def apply_noise(image: Image.Image, config) -> Image.Image:
-    if config.enable_noise:
-        noise_intensity = random.uniform(*config.noise_intensity_range)
+
+
+def apply_effect(image: Image.Image, config, noise_intensity=None, blur_radius=None,
+                 brightness_factor=None, contrast_factor=None) -> Image.Image:
+    if config.enable_noise and noise_intensity is not None:
         return add_noise(image, noise_intensity)
-    return image
-
-def apply_blur(image: Image.Image, config) -> Image.Image:
-    if config.enable_blur:
-        blur_radius = random.uniform(*config.blur_radius_range)
-        return image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
-    return image
-
-def apply_brightness(image: Image.Image, config) -> Image.Image:
-    if config.enable_brightness_variation:
-        brightness_factor = random.uniform(*config.brightness_factor_range)
+    if config.enable_blur and blur_radius is not None:
+        return image #image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+    if config.enable_brightness_variation and brightness_factor is not None:
         enhancer = ImageEnhance.Brightness(image)
         return enhancer.enhance(brightness_factor)
-    return image
-
-def apply_contrast(image: Image.Image, config) -> Image.Image:
-    if config.enable_contrast_variation:
-        contrast_factor = random.uniform(*config.contrast_factor_range)
+    if config.enable_contrast_variation and contrast_factor is not None:
         enhancer = ImageEnhance.Contrast(image)
         return enhancer.enhance(contrast_factor)
     return image
+
 def apply_realistic_effects(image: Image.Image, cells: List[List[float]], table_bbox: List[float], 
-                            config) -> Tuple[Image.Image, List[List[float]], List[float], np.ndarray, int, int]:
-    table_logger.debug(f"Applying effects: perspective={config.enable_perspective_transform}, noise={config.enable_noise}, blur={config.enable_blur}")
+                            config) -> Tuple[Image.Image, List[List[float]], List[float], int, int]:
+    table_logger.debug(f"Applying effects: perspective={config.enable_perspective_transform}, "
+                       f"noise={config.enable_noise}, blur={config.enable_blur}")
 
     new_width, new_height = image.size
 
     # 표 잘라내기 기능 추가
-    if random.random() < config.table_crop_probability and random.random() < config.table_crop_probability:  # 10% 확률로 표 잘라내기 적용
+    if random.random() < config.table_crop_probability:
         image, cells, table_bbox = crop_table(image, cells, table_bbox, config)
 
-    # 기존 효과 적용
+    # 그림자 추가
     if config.enable_shadow:
         all_directions = ['bottom', 'right', 'left', 'top']
         num_directions = random.randint(1, 4)
         shadow_directions = random.sample(all_directions, num_directions)
         shadow_opacity = random.randint(*config.shadow_opacity_range)
-        image = add_directional_shadow(image, shadow_directions, config.shadow_blur_radius, 
+        image = add_directional_shadow(image, shadow_directions, config.shadow_blur_radius,
                                        config.shadow_size_ratio, shadow_opacity)
 
-    image = apply_noise(image, config)
-    image = apply_blur(image, config)
-    image = apply_brightness(image, config)
-    image = apply_contrast(image, config)
-    
+    # 랜덤 값 미리 생성
+    noise_intensity = random.uniform(*config.noise_intensity_range) if config.enable_noise else None
+    blur_radius = random.uniform(*config.blur_radius_range) if config.enable_blur else None
+    brightness_factor = random.uniform(*config.brightness_factor_range) if config.enable_brightness_variation else None
+    contrast_factor = random.uniform(*config.contrast_factor_range) if config.enable_contrast_variation else None
+
+    # 효과 적용
+    image = apply_effect(image, config, noise_intensity=noise_intensity,
+                         blur_radius=blur_radius,
+                         brightness_factor=brightness_factor,
+                         contrast_factor=contrast_factor)
+
     return image, cells, table_bbox, new_width, new_height
+
 
 def crop_table(image: Image.Image, cells: List[Dict], table_bbox: List[float], config) -> Tuple[Image.Image, List[Dict], List[float]]:
     # 병합된 셀이나 오버플로우 셀이 있는지 확인
@@ -77,7 +79,6 @@ def crop_table(image: Image.Image, cells: List[Dict], table_bbox: List[float], c
         table_logger.info("Table contains merged or overflow cells. Skipping crop operation.")
         return image, cells, table_bbox
 
-    original_width, original_height = image.size
     
     crop_direction = random.choice(['left', 'right', 'top', 'bottom'])
     crop_amount = random.uniform(0.1, 0.3)

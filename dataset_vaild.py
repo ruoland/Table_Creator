@@ -365,10 +365,8 @@ def generate_table_statistics(annotation_path):
     print(f"평균 행 수: {np.mean(row_counts):.2f} (최소: {min(row_counts)}, 최대: {max(row_counts)})")
     print(f"평균 열 수: {np.mean(col_counts):.2f} (최소: {min(col_counts)}, 최대: {max(col_counts)})")
 
-    merged_cell_ratio = (cell_counts['merged_cell'] + cell_counts['merged_overflow_cell']) / total_cells
     overflow_cell_ratio = (cell_counts['overflow_cell'] + cell_counts['merged_overflow_cell']) / total_cells
 
-    print(f"\n병합된 셀 비율: {merged_cell_ratio:.2%}")
     print(f"오버플로우 셀 비율: {overflow_cell_ratio:.2%}")
     print(f"병합된 셀이 있는 테이블 비율: {tables_with_merged_cells / total_tables:.2%}")
     print(f"오버플로우가 있는 테이블 비율: {tables_with_overflow / total_tables:.2%}")

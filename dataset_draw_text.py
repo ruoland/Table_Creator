@@ -1,6 +1,7 @@
 from PIL import Image, ImageColor, ImageFont, ImageDraw
 from dataset_utils import *
 from dataset_constant import *
+
 from logging_config import table_logger
 from dataset_config import config, MIN_CELL_SIZE_FOR_TEXT, MIN_FONT_SIZE, PADDING
 import numpy as np
@@ -78,8 +79,10 @@ def generate_cell_text(is_header, cell_width, font_size):
             for _ in range(num_lines)
         ])
 
-def add_text_to_cell(draw: ImageDraw.Draw, cell: Dict[str, Any], font_path: str, 
+COMMON_WORDS = tuple(COMMON_WORDS)  # 리스트를 튜플로 변환
+def add_text_to_cell(draw: ImageDraw.Draw, cell: Dict[str, Any], font_path: str,
                      color: Tuple[int, int, int], position: str, text: str = None) -> None:
+    """셀에 텍스트를 추가합니다."""
     cell_width = cell['x2'] - cell['x1']
     cell_height = cell['y2'] - cell['y1']
     
@@ -87,9 +90,18 @@ def add_text_to_cell(draw: ImageDraw.Draw, cell: Dict[str, Any], font_path: str,
         return ""
 
     is_header = cell['is_header']
-    max_font_size = min(int(cell_height * (0.7 if is_header else 0.5)), 
-                        int(cell_width * (0.4 if is_header else 0.25)))
+    max_font_size = random.randint(MIN_FONT_SIZE, min(int(cell_height), int(cell_width)))
+
+    # 헤더 셀의 내용 설정
+    if is_header:
+        if cell.get('is_header_row', False):  # 헤더 행
+            weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            text = random.choice(weekdays + [generate_cell_text(is_header, cell_width, max_font_size)])
+        else:  # 헤더 열
+            text = random.choice([str(random.randint(1, 10)), '교시', '호', generate_cell_text(is_header, cell_width, max_font_size)])
     
+    # 랜덤한 글씨 크기 설정
+
     text = text or generate_cell_text(is_header, cell_width, max_font_size)
     
     try:
@@ -104,22 +116,17 @@ def add_text_to_cell(draw: ImageDraw.Draw, cell: Dict[str, Any], font_path: str,
         text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1]
         
         start_x, start_y = calculate_text_position(
-            cell['x1']+PADDING, cell['y1']+PADDING, 
-            cell_width-2*PADDING, cell_height-2*PADDING, 
+            cell['x1'] + PADDING, cell['y1'] + PADDING,
+            cell_width - 2 * PADDING, cell_height - 2 * PADDING,
             text_width, text_height, position
         )
         
-        draw.multiline_text((start_x, start_y), wrapped_text, font=font, fill=color, align="left")
-        
-        return wrapped_text
+        draw.multiline_text((start_x, start_y), wrapped_text, font=font, fill=color)
+
     except Exception as e:
         table_logger.error(f"Error adding text to cell: {e}")
         table_logger.error(f"Cell details: {cell}")
         table_logger.error(f"Font path: {font_path}, Text color: {color}, Position: {position}")
-        return ""
-COMMON_WORDS = tuple(COMMON_WORDS)  # 리스트를 튜플로 변환
-def generate_multi_line_text(min_lines=4, max_lines=6):
-    return '\n'.join(random.choices(COMMON_WORDS, k=random.randint(min_lines, max_lines)))
 
 
 def wrap_text(text: str, max_width: int, font: ImageFont.FreeTypeFont) -> str:
@@ -140,11 +147,34 @@ def wrap_text(text: str, max_width: int, font: ImageFont.FreeTypeFont) -> str:
                 current_width = word_width + space_width
         lines.append(' '.join(current_line))
     return '\n'.join(lines)
-
+from typing import Tuple
 
 def get_text_color(bg_color: Tuple[int, int, int]) -> Tuple[int, int, int]:
+    """배경색에 따라 대비되는 텍스트 색상을 반환합니다."""
+    # 밝기 계산 (가중치 적용)
     brightness = (bg_color[0] * 299 + bg_color[1] * 587 + bg_color[2] * 114) / 1000
+
+    # 텍스트 색상 결정
     if brightness > 128:
-        return (max(0, bg_color[0] - 130), max(0, bg_color[1] - 130), max(0, bg_color[2] - 130))
+        # 밝은 배경일 경우 어두운 색상
+        text_color = (
+            max(0, bg_color[0] - 130),
+            max(0, bg_color[1] - 130),
+            max(0, bg_color[2] - 130)
+        )
     else:
-        return (min(255, bg_color[0] + 130), min(255, bg_color[1] + 130), min(255, bg_color[2] + 130))
+        # 어두운 배경일 경우 밝은 색상
+        text_color = (
+            min(255, bg_color[0] + 130),
+            min(255, bg_color[1] + 130),
+            min(255, bg_color[2] + 130)
+        )
+
+    # 약간의 변동성 추가 (±10)
+    text_color = (
+        max(0, min(255, text_color[0] + random.randint(-10, 10))),
+        max(0, min(255, text_color[1] + random.randint(-10, 10))),
+        max(0, min(255, text_color[2] + random.randint(-10, 10)))
+    )
+
+    return text_color

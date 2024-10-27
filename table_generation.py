@@ -12,6 +12,8 @@ class Table:
         self.table_width = 0
         self.table_height = 0
         self.cells = []
+        self.merged_cells = []  # 병합된 셀 리스트
+        self.overflow_cells = []  # 오버플로우 셀 리스트
         self.merged_cells = []
         self.overflow_cells = []
         self.col_widths = []
@@ -125,35 +127,31 @@ class Table:
             
         return cells
     def process_remain_space(self):
-                # 남은 공간 계산 (첫 번째 열 제외)
-        remaining_width = self.table_width - self.col_widths[0]
-        remaining_cols = self.cols - 1
-
+    # 헤더 행과 열을 제외한 남은 공간 계산
+        remaining_width = self.table_width - self.col_widths[0] - (self.cols - 1) * self.gap
+        remaining_height = self.table_height - self.row_heights[0] - (self.rows - 1) * self.gap
+        
         # 남은 열들의 너비 재조정
-        if remaining_cols > 0:
-            col_width = remaining_width // remaining_cols
-            extra_width = remaining_width % remaining_cols
-            
+        if self.cols > 1:
+            col_width = remaining_width // (self.cols - 1)
+            extra_width = remaining_width % (self.cols - 1)
             for i in range(1, self.cols):
                 self.col_widths[i] = col_width
                 if extra_width > 0:
                     self.col_widths[i] += 1
                     extra_width -= 1
-        # 남은 공간 계산 (첫 번째 행 제외)
-        remaining_height = self.table_height - self.row_heights[0]
-        remaining_rows = self.rows - 1
-
+        
         # 남은 행들의 높이 재조정
-        if remaining_rows > 0:
-            row_height = remaining_height // remaining_rows
-            extra_height = remaining_height % remaining_rows
-            
+        if self.rows > 1:
+            row_height = remaining_height // (self.rows - 1)
+            extra_height = remaining_height % (self.rows - 1)
             for i in range(1, self.rows):
                 self.row_heights[i] = row_height
                 if extra_height > 0:
                     self.row_heights[i] += 1
                     extra_height -= 1
-    
+
+        
     def make_cells(self):
         self.cells = []
         y = self.margin_top + self.title_height
@@ -183,7 +181,6 @@ class Table:
                 x += self.col_widths[col] + self.gap
             y += self.row_heights[row] + self.gap
 
-        log_cell_coordinates(self.cells, "Initial cell creation")
         # 테이블의 전체 경계 상자 계산
         table_bbox = [
             self.margin_left,
@@ -191,20 +188,34 @@ class Table:
             self.margin_left + self.table_width,
             self.margin_top + self.title_height + self.table_height
         ]
+        
         if self.table_width > (table_bbox[2] - table_bbox[0]) or self.table_height > (table_bbox[3] - table_bbox[1]):
             table_logger.warning(f"Table size exceeds bounding box. Bbox: {table_bbox}, Table: {self.table_width}x{self.table_height}")
+        
+        # 셀 유효성 검사
         self.cells = validate_all_cells(self.cells, table_bbox, "cell creation")
         self.table_bbox = table_bbox
         return self.cells
-    
     def make_merged_cells(self):
-        if self.config.enable_cell_merging and len(self.cells) > 2:
-            self.cells = merge_cells(self.cells, self.rows, self.cols, self.config)
-        self.cells = validate_all_cells(self.cells, self.table_bbox, "cell merging")
         
-    def make_overflow_cells(self):
-        self.cells = plan_cell_overflow(self.cells, self.config)
+        if self.config.enable_cell_merging:
+            self.cells = merge_cells(self.cells, self.rows, self.cols, self.config)
+        # 유효성 검사
         self.cells = validate_all_cells(self.cells, self.table_bbox, "cell merging")
+    def make_overflow_cells(self):
+    # is_gray가 True인 셀만 오버플로우 처리
+        gray_cells = [cell for cell in self.cells if cell.get('is_gray', False)]
+        if gray_cells:
+            if self.config.enable_overflow:
+                overflowed_cells = plan_cell_overflow(self, gray_cells, self.config)
+                # 오버플로우 처리된 셀을 기존 셀 리스트에 반영
+                for overflowed_cell in overflowed_cells:
+                    # 오버플로우된 셀을 cells에 추가하고 기존 gray 셀은 제거
+                    if overflowed_cell not in self.cells:
+                        self.cells.append(overflowed_cell)
+
+            # 유효성 검사
+                self.cells = validate_all_cells(self.cells, self.table_bbox, "cell merging")
     def validate_table(self):
         # 최종 검증: 셀이 2개 미만인 경우 처리
         if len(self.cells) < 2:
@@ -223,46 +234,53 @@ class Table:
         # 좌표 검증 호출
         self.cells = self.validate_cell_coordinates(self.cells, self.table_bbox)
         
-
-    def create_table(self, image_width :int, image_height :int, margins, title_height, config: TableGenerationConfig):
+    def create_table(self, image_width: int, image_height: int, margins, title_height, config: TableGenerationConfig):
+        # 기존 구조 유지
         self.config = config
         self.config.randomize_settings()
+        self.config.overflow_or_merged()
+        
+        # 테이블 크기 설정
         self.set_table_dimensions()
 
+        # 이미지 크기 설정 및 마진 설정
         self.image_width = image_width
         self.image_height = image_height
         self.set_margins(margins, title_height)
-        title_height = int(title_height)
         
+        # 갭 및 행렬 설정
         self.set_gap()
         self.set_matrix()
+        
+        # 셀 크기 및 헤더 설정
         self.set_cell_size_and_header()
+        
+        # 남은 공간 처리 및 셀 생성
         self.process_remain_space()
         
-        self.make_cells()
-
-        # 셀 병합 (옵션)
-        
+        # 셀 생성 및 유효성 검사
         try:
-
+            # 셀 생성 후 병합 및 오버플로우 처리 
+            self.make_cells()
             self.make_merged_cells()
             self.make_overflow_cells()
 
-            self.cells = adjust_cell_positions(self.cells, config, self.table_bbox)
+            # 위치 조정 및 테이블 검증 
+            adjust_cell_positions(self.cells, config, self.table_bbox)
             self.validate_table()
-            
-            
 
             is_table_rounded = config.enable_rounded_table_corners and random.random() < config.rounded_table_corner_probability
             table_corner_radius = random.randint(config.min_table_corner_radius, config.max_table_corner_radius) if is_table_rounded else 0
             
-                
-            return self, self.cells, self.table_bbox, is_table_rounded, table_corner_radius    
+            return (self, 
+                    [cell for cell in self.cells], 
+                    self.table_bbox, 
+                    is_table_rounded, 
+                    table_corner_radius)
+
         except Exception as e:
             table_logger.error(f"테이블 생성 중 오류 발생: {str(e)}", exc_info=True)
-
             raise
-    
     
 
 def generate_coco_annotations(cells, table_bbox, image_id, config):

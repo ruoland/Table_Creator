@@ -3,20 +3,31 @@ import logging
 from logging.handlers import MemoryHandler
 import sys
 
+import os
+import os
+
 def setup_logger():
     logger = logging.getLogger('table_generator')
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.DEBUG)
 
     # 스트림 핸들러 설정 (콘솔 출력용)
     stream_handler = logging.StreamHandler(sys.stderr)
     stream_handler.setLevel(logging.ERROR)
 
+    # 파일 핸들러 설정
+    log_dir = 'logs'
+    os.makedirs(log_dir, exist_ok=True)
+    file_handler = logging.FileHandler(os.path.join(log_dir, 'table_generator.log'))
+    file_handler.setLevel(logging.DEBUG)
+
     # 포맷터 설정
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     stream_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
 
     # 핸들러를 로거에 추가
     logger.addHandler(stream_handler)
+    logger.addHandler(file_handler)
 
     return logger
 

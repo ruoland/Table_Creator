@@ -122,19 +122,22 @@ def add_dots(draw: ImageDraw.Draw, x1: int, y1: int, x2: int, y2: int, color: Tu
         draw.ellipse([(dot_x-dot_size, dot_y-dot_size), 
                       (dot_x+dot_size, dot_y+dot_size)], 
                      fill=color)
-def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str, 
-                         empty_cell_ratio: float = config.empty_cell_ratio) -> None:
+        
+def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str,
+                         empty_cell_ratio: float) -> None:
     draw = ImageDraw.Draw(img)
     width, height = img.size
     for cell in cells:
-        if random.random() < empty_cell_ratio:
+        content_type = random.choice(config.cell_content_types)
+
+        # 오직 회색 셀만
+        if (random.random() < empty_cell_ratio):
             continue
         
         cell_width, cell_height = int(cell['x2'] - cell['x1']), int(cell['y2'] - cell['y1'])
         if cell_width < MIN_CELL_SIZE_FOR_CONTENT or cell_height < MIN_CELL_SIZE_FOR_CONTENT:
             continue
 
-        content_type = random.choice(config.cell_content_types)
         position = random.choice(config.text_positions)
         # 좌표 유효성 검사 및 조정
         x1 = max(0, min(cell['x1'], width - 1))
@@ -147,28 +150,22 @@ def add_content_to_cells(img: Image.Image, cells: List[dict], font_path: str,
         cell_bg_color = img.getpixel((cell['x1'] + 1, cell['y1'] + 1))
         content_color = get_text_color(cell_bg_color)
         
-        
         if config.enable_text_generation and content_type in ['text', 'mixed']:
-            # 'is_header' 키가 없는 경우를 처리
             is_header = cell.get('is_header', False)
-            
-            # 여러 줄의 텍스트 생성
             multi_line_text = generate_multi_line_text(min_lines=4, max_lines=6)
             
-            # 셀 크기에 맞게 텍스트 줄바꿈
             font = get_font(font_path, random.randint(10, 20))
             wrapped_text = wrap_text(multi_line_text, cell_width - 10, font)  # 10은 여백
             
             add_text_to_cell(draw, {**cell, 'is_header': is_header}, font_path, content_color, position, text=wrapped_text)
         
         if config.enable_shapes and content_type in ['shapes', 'mixed']:
-            add_shapes(img, cell['x1'], cell['y1'], cell_width, cell_height, cell_bg_color, 
+            add_shapes(img, cell['x1'], cell['y1'], cell_width, cell_height, cell_bg_color,
                        num_shapes=random.randint(1, 2), size_range=(5, min(cell_width, cell_height) // 3))
 
-
-COMMON_WORDS = tuple(COMMON_WORDS)  # 리스트를 튜플로 변환
 def generate_multi_line_text(min_lines=4, max_lines=6):
     return '\n'.join(random.choices(COMMON_WORDS, k=random.randint(min_lines, max_lines)))
+
 
 def add_title_to_image(img: Image.Image, image_width: int, image_height: int, 
                        margin_top: int, bg_color: Tuple[int, int, int]) -> int:
@@ -195,8 +192,8 @@ def add_title_to_image(img: Image.Image, image_width: int, image_height: int,
     
     x = (image_width - text_width) // 2
     y = margin_top + random.randint(5, 20)
-    text_color = get_line_color(bg_color, config)
+    title_text_color = get_line_color(bg_color, config)
     
-    draw.text((x, y), title, font=font, fill=text_color)
+    draw.text((x, y), title, font=font, fill=title_text_color)
 
     return y + text_height

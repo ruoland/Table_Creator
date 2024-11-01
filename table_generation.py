@@ -198,16 +198,15 @@ class Table:
         return self.cells
     def make_merged_cells(self):
         
-        if self.config.enable_cell_merging:
+        if self.config.enable_horizontal_merge or self.config.enable_vertical_merge:
             self.cells = merge_cells(self.cells, self.rows, self.cols, self.config)
         # 유효성 검사
         self.cells = validate_all_cells(self.cells, self.table_bbox, "cell merging")
+            
     def make_overflow_cells(self):
     # is_gray가 True인 셀만 오버플로우 처리
-        gray_cells = [cell for cell in self.cells if cell.get('is_gray', False)]
-        if gray_cells:
             if self.config.enable_overflow:
-                overflowed_cells = plan_cell_overflow(self, gray_cells, self.config)
+                overflowed_cells = plan_cell_overflow(self, self.cells, self.config)
                 # 오버플로우 처리된 셀을 기존 셀 리스트에 반영
                 for overflowed_cell in overflowed_cells:
                     # 오버플로우된 셀을 cells에 추가하고 기존 gray 셀은 제거
@@ -216,6 +215,7 @@ class Table:
 
             # 유효성 검사
                 self.cells = validate_all_cells(self.cells, self.table_bbox, "cell merging")
+                
     def validate_table(self):
         # 최종 검증: 셀이 2개 미만인 경우 처리
         if len(self.cells) < 2:
@@ -238,7 +238,7 @@ class Table:
         # 기존 구조 유지
         self.config = config
         self.config.randomize_settings()
-        self.config.overflow_or_merged()
+        #self.config.overflow_or_merged()
         
         # 테이블 크기 설정
         self.set_table_dimensions()
@@ -434,7 +434,7 @@ def generate_coco_annotations(cells, table_bbox, image_id, config):
         "has_rounded_corners": config.enable_rounded_corners,
         "has_cell_gap": config.enable_cell_gap,
         "has_overflow": config.enable_overflow,
-        "has_merged_cells": config.enable_cell_merging,
+        "has_merged_cells": config.enable_vertical_merge or config.enable_horizontal_merge,
         "has_gray_cells": config.enable_gray_cells,
         "x1": table_bbox[0],
         "y1": table_bbox[1],

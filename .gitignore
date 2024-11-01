@@ -25,3 +25,4 @@ rtmdet_dataset.zip
 /rtmdet_dataset
 *.png
 *.zip
+logs/table_generator.log

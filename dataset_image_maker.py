@@ -101,9 +101,9 @@ def process_images(args):
 
     for image_id in image_ids:
         if complexity == 'simple':
-            config.image_level = 1
+            config.image_level = 2
         elif complexity == 'middle':
-            config.image_level = 3.1
+            config.image_level = 4.5
         elif complexity == 'complex':
             config.image_level = 6.1
         elif complexity == 'mixed':
@@ -112,7 +112,7 @@ def process_images(args):
             if rand < config.simple_ratio:
                 config.image_level = 1
             elif rand < config.simple_ratio + config.middle_ratio:
-                config.image_level = 6.1
+                config.image_level = 4.5
             else:
                 config.image_level = 6.1
 

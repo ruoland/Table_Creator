@@ -32,7 +32,7 @@ def run_dataset_generation(output_dir, num_images, train_ratio, num_processes, c
 def main():
     start_time = time.time()
 
-    output_dir = r'C:\project\table_ver6'
+    output_dir = r'C:\project\table_ver6-for_overflow'
     train_ratio = 0.8
     num_processes = cpu_count() - 2
 
